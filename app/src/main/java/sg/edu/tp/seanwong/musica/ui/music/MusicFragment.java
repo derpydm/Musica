@@ -53,7 +53,6 @@ public class MusicFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_music, container, false);
         // Get reference to recycler view
         rv = root.findViewById(R.id.musicRecyclerView);
-
         if (hasPermission()) {
             // Load songs if permissions are available
             songs = Song.getAllAudioFromDevice(getContext());
@@ -62,13 +61,11 @@ public class MusicFragment extends Fragment {
             // Ask for external fs r/w permission
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
         }
-
-
         return root;
     }
     public void setupRecyclerView(List<Song> songList) {
         // Create adapter using songs, set adapter
-        MusicAdapter mAdapter = new MusicAdapter(songList);
+        MusicAdapter mAdapter = new MusicAdapter(songList, getContext());
         rv.setAdapter(mAdapter);
         // Set layout manager
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
