@@ -1,39 +1,33 @@
 package sg.edu.tp.seanwong.musica.ui.music;
 
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
-import android.media.Image;
-import android.media.MediaPlayer;
 import android.net.Uri;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
-
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
-
-import org.w3c.dom.Text;
-
-import java.io.IOException;
-import java.util.List;
-
+import java.util.ArrayList;
+import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> {
     Context context;
-    MediaPlayer mp;
-
+    private OnUpdateListener listener;
+    public interface OnUpdateListener {
+        void updatePopupText(Song song);
+        void updatePlayButtonState(boolean isPlaying);
+        void setMusicStartPlaying();
+    }
     public class ViewHolder extends RecyclerView.ViewHolder {
         // Your holder should contain a member variable
         // for any view that will be set as you render a row
@@ -57,16 +51,16 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
 
     // Store a member variable for the songs
     // This is a reference to ALL songs
-    private List<Song> mSongs;
+    private ArrayList<Song> mSongs;
 
     // Variable for currently queued songs
-    private List<Song> queue;
-
+    private ArrayList<Song> queue;
     // Index of current queue progress
     private int currentIndex = 0;
     // Pass in the contact array into the constructor
-    public MusicAdapter(List<Song> songs, Context context) {
+    public MusicAdapter(ArrayList<Song> songs, Context context, OnUpdateListener listener) {
         mSongs = songs;
+        this.listener = listener;
         this.context = context;
     }
 
@@ -75,7 +69,6 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
     public MusicAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         Context context = parent.getContext();
         LayoutInflater inflater = LayoutInflater.from(context);
-
         // Inflate the custom layout
         View musicView = inflater.inflate(R.layout.musiclayout, parent, false);
         // Return a new holder instance
@@ -110,84 +103,25 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                currentIndex = 0;
-                playMusic(song, position);
+                playMusic(position);
             }
         });
     }
-    // TODO: Migrate to a Service
-    private void playMusicWithoutPartitioning() {
-        // Does not touch queue, plays next song based on currentIndex
-        // Called on assumption that next song in queue exists.
-        Song song = queue.get(currentIndex);
-
-        try {
-            mp.setDataSource(song.getPath());
-            mp.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(context,
-                    "An error occured trying to play that track",
-                    Toast.LENGTH_SHORT)
-                    .show();
-        }
-        if (!mp.isPlaying()) {
-            mp.start();
-        }
-        Log.d("MusicPlayer", song.getTitle() + "is now playing");
-    }
-    // TODO: Migrate this to a Service so that we can play music in the background
-    private void playMusic(Song song, final int position) {
+    // Start service to play music and queue all following tracks
+    private void playMusic(final int position) {
         // Add every song besides the ones before it
-        queue = mSongs.subList(position, mSongs.size() - 1);
-
-        // Play the music here, regardless of whether any music was playing beforehand
-        // Stop any other tracks beforehand
-
-        if (mp != null) {
-            mp.stop();
-            mp.reset();
-        } else {
-            mp = new MediaPlayer();
-        }
-        try {
-            mp.setDataSource(song.getPath());
-            mp.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(context,
-                    "An error occured trying to play that track",
-                    Toast.LENGTH_SHORT)
-                    .show();
-        }
-        if (!mp.isPlaying()) {
-            mp.start();
-        }
-        Log.d("MusicPlayer", song.getTitle() + "is now playing");
-        mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                mp.stop();
-                mp.reset();
-                // Check if the queue contains a new song
-                // If so we play it
-
-                if (!(position + 1 == queue.size())) {
-                    currentIndex += 1;
-                    mp.reset();
-                    playMusicWithoutPartitioning();
-                } else {
-                    mp.reset();
-                }
-            }
-        });
+        queue = new ArrayList<>();
+        queue.addAll(0, mSongs.subList(position, mSongs.size()));
+        listener.setMusicStartPlaying();
+        Intent intent = new Intent(context, MusicService.class);
+        ArrayList<Song> q = new ArrayList<>(queue);
+        Log.d("Songs queue", queue.toString());
+        intent.putParcelableArrayListExtra("queue", q);
+        intent.setAction(MusicService.ACTION_START_PLAY);
+        listener.updatePopupText(queue.get(0));
+        context.startService(intent);
     }
 
-    // TODO: Migrate to a Service
-    private void playOrPauseMusic(Song song) {
-        // Play or pause the music. Depends on view state, if music is playing we pause it.
-        // If it's not we trust that it's not null and play the music.
-    }
     // Get total list length
     @Override
     public int getItemCount() {

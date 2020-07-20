@@ -2,14 +2,16 @@ package sg.edu.tp.seanwong.musica.util;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.MergeCursor;
 import android.net.Uri;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class Song {
+public class Song implements Parcelable {
     private String title;
     private String path;
     private long length;
@@ -27,8 +29,8 @@ public class Song {
     }
 
     public String getFormattedTime() {
-        long minutes = (long) ((length / 1000) / 60);
-        long seconds = (long) ((length / 1000) % 60);
+        long minutes = ((length / 1000) / 60);
+        long seconds = ((length / 1000) % 60);
         return (String.format("%d", minutes) + ":" + String.format("%d", seconds));
     }
 
@@ -79,13 +81,11 @@ public class Song {
     public void setAlbumArt(long albumId) {
         this.albumId = albumId;
     }
-    public static final List<Song> getAllAudioFromDevice(final Context context) {
-        final List<Song> tempAudioList = new ArrayList<>();
-
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+    public static ArrayList<Song> getAllAudioFromDevice(final Context context) {
+        final ArrayList<Song> tempAudioList = new ArrayList<>();
+        Uri externalContentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
         String[] projection = {MediaStore.Audio.AudioColumns.DATA, MediaStore.Audio.AudioColumns.TITLE, MediaStore.Audio.AudioColumns.ALBUM, MediaStore.Audio.ArtistColumns.ARTIST, MediaStore.MediaColumns.DURATION, MediaStore.Audio.AudioColumns.ALBUM_ID};
-        Cursor c = context.getContentResolver().query(uri, projection, MediaStore.Audio.Media.IS_MUSIC + " != 0 ", null , MediaStore.Audio.AudioColumns.TITLE + " ASC");
-
+        Cursor c = context.getContentResolver().query(externalContentUri, projection, null, null, MediaStore.Audio.Media.TITLE + " ASC");
         if (c != null) {
             Log.e("Song finder", String.valueOf(c.getCount()));
             while (c.moveToNext()) {
@@ -100,11 +100,48 @@ public class Song {
                 tempAudioList.add(song);
             }
             c.close();
-        } else {
-            Log.e("Song finder", "No song found");
         }
 
         return tempAudioList;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    // write your object's data to the passed-in Parcel
+
+
+    // Regenerate song from parcel
+    public static final Parcelable.Creator<Song> CREATOR = new Parcelable.Creator<Song>() {
+        public Song createFromParcel(Parcel in) {
+            return new Song(in);
+        }
+
+        public Song[] newArray(int size) {
+            return new Song[size];
+        }
+    };
+
+    @Override
+    public void writeToParcel(Parcel out, int flags) {
+        out.writeString(title);
+        out.writeString(path);
+        out.writeString(album);
+        out.writeString(artist);
+        out.writeLong(length);
+        out.writeLong(albumId);
+
+    }
+    // Reconstruct object in the same order that we added them to parcel
+    private Song(Parcel in) {
+        this.title = in.readString();
+        this.path = in.readString();
+        this.album = in.readString();
+        this.artist = in.readString();
+        this.length = in.readLong();
+        this.albumId = in.readLong();
     }
 }
 

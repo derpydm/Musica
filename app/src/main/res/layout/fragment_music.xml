@@ -9,7 +9,8 @@
         android:id="@+id/musicRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginBottom="100dp"
         android:scrollbars="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -32,5 +33,68 @@
         app:layout_constraintStart_toStartOf="@+id/musicRecyclerView"
         app:layout_constraintTop_toTopOf="@+id/musicRecyclerView"
         tools:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/popupBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/colorTint"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/musicRecyclerView" />
+
+    <ImageView
+        android:id="@+id/popupAlbumImage"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/musicRecyclerView"
+        app:srcCompat="@drawable/ic_album_24px" />
+
+    <TextView
+        android:id="@+id/popupTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="No song playing"
+        app:layout_constraintEnd_toStartOf="@+id/playOrPauseButton"
+        app:layout_constraintStart_toEndOf="@+id/popupAlbumImage"
+        app:layout_constraintTop_toBottomOf="@+id/musicRecyclerView" />
+
+    <TextView
+        android:id="@+id/popupArtist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/playOrPauseButton"
+        app:layout_constraintStart_toEndOf="@+id/popupAlbumImage"
+        app:layout_constraintTop_toBottomOf="@+id/popupTitle" />
+
+    <ImageButton
+        android:id="@+id/playOrPauseButton"
+        style="@android:style/Widget.DeviceDefault.ImageButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="32dp"
+        android:background="#00FFFFFF"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/musicRecyclerView"
+        app:layout_constraintVertical_bias="0.571"
+        app:srcCompat="@drawable/ic_play_circle_filled_24px" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

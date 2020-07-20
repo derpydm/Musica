@@ -3,6 +3,7 @@
     package="sg.edu.tp.seanwong.musica">
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -10,17 +11,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".StartActivity">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <service
+            android:name="sg.edu.tp.seanwong.musica.MusicService"
+            android:icon="@drawable/ic_album_24px"
+            android:label="@string/app_name"
+            android:enabled="true"
+            >
+        </service>
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PLAY" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PAUSE" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_SKIP" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PREVIOUS" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_NEXT" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_SHUFFLE" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_REPEAT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
     </application>
 
