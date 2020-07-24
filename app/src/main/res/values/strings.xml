@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Musica</string>
-
+    <string name="notification_name">Notification controls</string>
+    <string name="notification_desc">Notification controls for music.</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Musica</string>

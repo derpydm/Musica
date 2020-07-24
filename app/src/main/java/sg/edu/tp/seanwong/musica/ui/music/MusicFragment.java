@@ -3,9 +3,11 @@ package sg.edu.tp.seanwong.musica.ui.music;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
@@ -22,6 +24,7 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.os.IBinder;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -37,6 +40,8 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ui.PlayerControlView;
 
 import org.w3c.dom.Text;
 
@@ -56,23 +61,45 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         return new MusicFragment();
     }
     public static final int EXTERNAL_STORAGE_REQUEST = 1;
-    boolean isPlaying = false;
     RecyclerView rv;
     TextView popupTitle;
     TextView popupArtist;
     ImageView popupAlbumArt;
-    ImageButton playOrPauseButton;
+    PlayerControlView playOrPauseButton;
     MusicAdapter musicAdapter;
     ArrayList<Song> songs = new ArrayList<>();
-
+    private boolean isBound = false;
+    MusicService musicService;
     public boolean hasPermission() {
         // Check for external storage write perms
-        if (ContextCompat.checkSelfPermission(
-                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+        if ((ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.FOREGROUND_SERVICE) == PackageManager.PERMISSION_GRANTED)) {
             return true;
         } else {
             return false;
         }
+    }
+
+    private ServiceConnection connection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            MusicService.ServiceBinder binder = (MusicService.ServiceBinder) iBinder;
+            musicService = binder.getService();
+            isBound = true;
+            initPlayer();
+            Log.d("Music Fragment", musicService.getplayerInstance().toString());
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            isBound = false;
+        }
+    };
+
+    private void initPlayer() {
+        SimpleExoPlayer player = musicService.getplayerInstance();
+        playOrPauseButton.setPlayer(player);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -81,29 +108,35 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
                              @Nullable Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_music, container, false);
 
+        // Start music service and initialise notification for persistence
+        Intent intent = new Intent(getContext(), MusicService.class);
+        intent.setAction(MusicService.ACTION_INIT);
+        getContext().startService(intent);
+        getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
+
         // Get references to views
         rv = root.findViewById(R.id.musicRecyclerView);
         popupAlbumArt = root.findViewById(R.id.popupAlbumImage);
         popupArtist = root.findViewById(R.id.popupArtist);
         popupTitle = root.findViewById(R.id.popupTitle);
-        playOrPauseButton = root.findViewById(R.id.playOrPauseButton);
+        playOrPauseButton = root.findViewById(R.id.music_play_button);
+        playOrPauseButton.setShowTimeoutMs(0);
 
-        // Register touch listener for buttons
+        // Register touch listener for button
         playOrPauseButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 // Play/pause only when user releases the button
                 if (event.getAction() == KeyEvent.ACTION_UP) {
                     Log.d("music player", "button touch event triggered!");
-                    playOrPauseMusicHandler(isPlaying);
-                    isPlaying = !isPlaying;
+                    SimpleExoPlayer player = musicService.getplayerInstance();
+                    ImageButton bt = (ImageButton) v;
+                    Log.d("view id",String.valueOf(v.getId()));
                 }
                 return false;
             }
         });
 
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(onNextSong, new IntentFilter(MusicService.MUSIC_NEXT_SONG));
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(onMusicStop, new IntentFilter(MusicService.MUSIC_ENDED));
         // Check for permissions
         if (hasPermission()) {
             // Load songs if permissions are available
@@ -111,26 +144,10 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             setupRecyclerView(songs);
         } else {
             // Ask for external fs r/w permission
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.FOREGROUND_SERVICE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
         }
 
         return root;
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        getActivity().unregisterReceiver(onMusicStop);
-        getActivity().unregisterReceiver(onNextSong);
-    }
-
-    @Override
-    public void onResume()
-    {
-        super.onResume();
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(onNextSong, new IntentFilter(MusicService.MUSIC_NEXT_SONG));
-        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(onMusicStop, new IntentFilter(MusicService.MUSIC_ENDED));
     }
 
     public void setupRecyclerView(ArrayList<Song> songList) {
@@ -141,22 +158,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
     }
 
-    private BroadcastReceiver onMusicStop = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            // Music stopped due to queue ending, update view to pause music
-            updatePlayButtonState(true);
-        }
-    };
-
-    private BroadcastReceiver onNextSong = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            // Get extra data included in the Intent
-            Song nextSong = intent.getParcelableExtra("nextSong");
-            updatePopupText(nextSong);
-        }
-    };
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -189,6 +190,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             TextView missingLibraryView = getView().findViewById(R.id.musicSongMissingText);
             missingLibraryView.setVisibility(View.INVISIBLE);
         }
+
     }
 
     @Override
@@ -208,7 +210,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
                     .into(popupAlbumArt);
             popupArtist.setText(song.getArtist());
             popupTitle.setText(song.getTitle());
-            isPlaying = true;
         }
     }
 
@@ -217,12 +218,12 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         if (wasPlaying) {
             // Music was playing and about to pause, set button to play
             Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_play_circle_filled_24px);
-            playOrPauseButton.setImageDrawable(d);
+
 
         } else {
             // Music was paused and going to play, set button to pause
             Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_pause_circle_filled_24px);
-            playOrPauseButton.setImageDrawable(d);
+
         }
     }
 
@@ -230,7 +231,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     public void setMusicStartPlaying() {
         // Music just started playing, set button to pause
         Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_pause_circle_filled_24px);
-        playOrPauseButton.setImageDrawable(d);
     }
 
 

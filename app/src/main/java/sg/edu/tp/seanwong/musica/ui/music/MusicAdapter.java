@@ -117,6 +117,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         ArrayList<Song> q = new ArrayList<>(queue);
         Log.d("Songs queue", queue.toString());
         intent.putParcelableArrayListExtra("queue", q);
+        intent.putExtra("currentIndex", position);
         intent.setAction(MusicService.ACTION_START_PLAY);
         listener.updatePopupText(queue.get(0));
         context.startService(intent);

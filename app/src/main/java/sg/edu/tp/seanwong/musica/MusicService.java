@@ -1,39 +1,50 @@
 package sg.edu.tp.seanwong.musica;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
 
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
+import com.google.android.exoplayer2.ui.PlayerNotificationManager;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
+import com.google.android.exoplayer2.util.Util;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import sg.edu.tp.seanwong.musica.util.Song;
 
-public class MusicService extends Service implements MediaPlayer.OnCompletionListener, MediaPlayer.OnErrorListener {
+public class MusicService extends Service implements
+        PlayerNotificationManager.MediaDescriptionAdapter {
     //TODO potential reimplementation using ExoPlayer which looks to be easier
-    MediaPlayer mp;
+    private SimpleExoPlayer mp;
+    private final IBinder binder = new ServiceBinder();
+    private PlayerNotificationManager playerNotificationManager;
     int currentIndex = 0;
-    int progress = 0;
 
-
-
-    public enum State {
-        // Possible states of starting this service
-        // The first two are self explanatory, OTHER refers to other actions such as playing and pausing
-        STARTED_FROM_MUSIC,
-        STARTED_FROM_PLAYLIST,
-        OTHER
-    }
-
+    public static final String CHANNEL_ID = "Musica_Notification_Channel";
+    public static final int NOTIFICATION_ID = 123477;
+    public static final String ACTION_INIT = "sg.edu.tp.seanwong.musica.MusicService.ACTION_INIT";
     public static final String ACTION_START_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY";
     public static final String ACTION_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PLAY";
     public static final String ACTION_PAUSE = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PAUSE";
@@ -48,22 +59,50 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
     // Get binder for service
     // Not sure if needed as of right now
     public class ServiceBinder extends Binder {
-        MusicService getService()
+        public MusicService getService()
         {
             return MusicService.this;
         }
     }
 
+    private void freePlayer() {
+        // Null out player
+        if (mp != null) {
+            playerNotificationManager.setPlayer(null);
+            mp.release();
+            mp = null;
+        }
+    }
+
+    public SimpleExoPlayer getplayerInstance() {
+        if (mp == null) {
+            startPlayer();
+        }
+        return mp;
+    }
+
+    private void startPlayer() {
+        final Context context = this;
+        mp = new SimpleExoPlayer.Builder(context).build();
+        mp.setPlayWhenReady(true);
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
+        if (mp == null) {
+            startPlayer();
+        }
+        Log.d("Action", action);
 
         switch (action) {
+            case ACTION_INIT:
+                startNotification();
+                break;
             case ACTION_START_PLAY:
                 // Indicates that the queue needs to be reset and it is bundled with the extras.
                 queue = intent.getParcelableArrayListExtra("queue");
-                currentIndex = 0;
-                progress = 0;
+                currentIndex = intent.getIntExtra("currentValue",0);
                 playMusic();
                 break;
             case ACTION_PLAY:
@@ -77,8 +116,6 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
                 // Behaviour to pause music (assume music is playing)
                 if (mp != null) {
                     Log.d("music player", "paused!");
-                    mp.pause();
-                    progress = mp.getCurrentPosition();
                 }
                 break;
             case ACTION_PREVIOUS:
@@ -97,97 +134,71 @@ public class MusicService extends Service implements MediaPlayer.OnCompletionLis
                 // Something screwed up occured.
         }
 
-        // Use state instead in this approach
-        // Actions through intent looks nicer though
-//        MusicService.State state = (MusicService.State) intent.getSerializableExtra("state");
-//        if (intent == null) {
-//            // Undefined behaviour here because this service is not sticky
-//            // Intent should never be null.
-//        } else if (state == State.STARTED_FROM_MUSIC) {
-//
-//        } else if (state == State.STARTED_FROM_PLAYLIST) {
-//            // Handle if started from playlist
-//        } else if (state == State.OTHER) {
-//
-//        }
-
         return START_STICKY;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         //TODO for communication return IBinder implementation
-        return null;
+        return binder;
     }
 
+    private void startNotification() {
+        playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(this, CHANNEL_ID, R.string.notification_name, R.string.notification_desc, NOTIFICATION_ID, this, new PlayerNotificationManager.NotificationListener() {
+            @Override
+            public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
+
+                startForeground(notificationId, notification);
+            }
+            @Override
+            public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
+                stopSelf();
+            }
+        });
+        playerNotificationManager.setUseNavigationActions(true);
+        playerNotificationManager.setUseNavigationActionsInCompactView(true);
+        playerNotificationManager.setRewindIncrementMs(0);
+        playerNotificationManager.setFastForwardIncrementMs(0);
+        playerNotificationManager.setPlayer(mp);
+    }
     private void pauseMusic() {
         // Pause the current song, we assume that music is playing beforehand
-        progress = mp.getCurrentPosition();
-        mp.pause();
     }
     // TODO: Make this work with the service
     // TODO: Handle pausing and resuming at the timestamp
     private void playMusic() {
         // Get the song that should be playing
         Song song = queue.get(currentIndex);
+        Uri songUri = Uri.parse(song.getPath());
         // Play the music here, regardless of whether any music was playing beforehand
         // Stop any other tracks beforehand
+        DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, "Musica"));
+        MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(songUri);
+        mp.prepare(mediaSource);
 
-        if (mp == null) {
-            mp = new MediaPlayer();
-        }
-        mp.reset();
-        // Prepare path for current song
-        try {
-            mp.setDataSource(song.getPath());
-            mp.prepare();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // Handle if music is paused
-        if (progress > 0) {
-            mp.seekTo(progress);
-        }
-        mp.start();
-        // Handler for moving to next track
-        mp.setOnCompletionListener(this);
-        mp.setOnErrorListener(this);
     }
 
     @Override
-    public void onCompletion(MediaPlayer mpa) {
-        // Check if the queue contains a new song
-        // If so we play it
-        if (currentIndex + 1 != queue.size()) {
-            currentIndex += 1;
-            informFragmentOfNextSong(queue.get(currentIndex));
-            playMusic();
-        } else {
-            currentIndex = 0;
-            mp.reset();
-            informFragmentOfMusicEnd();
-        }
+    public String getCurrentContentTitle(Player player) {
+        return queue.get(currentIndex).getTitle();
     }
 
-    private void informFragmentOfNextSong(Song song) {
-        // Send broadcast that a next song is about to be played.
-        Intent nextSongIntent = new Intent(MUSIC_NEXT_SONG);
-        nextSongIntent.putExtra("nextSong", song);
-        // Necessary flag for broadcast to not be delayed.
-        nextSongIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(nextSongIntent);
-    }
-
-    private void informFragmentOfMusicEnd() {
-        // Send broadcast that the queue has ended.
-        Intent musicEndIntent = new Intent(MUSIC_ENDED);
-        // Necessary flag for broadcast to not be delayed.
-        musicEndIntent.setFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(musicEndIntent);
-    }
+    @Nullable
     @Override
-    public boolean onError(MediaPlayer mp, int what, int extra) {
-        return false;
+    public String getCurrentContentText(Player player) {
+        return queue.get(currentIndex).getArtist();
     }
 
+    @Nullable
+    @Override
+    public Bitmap getCurrentLargeIcon(Player player,
+                                      PlayerNotificationManager.BitmapCallback callback) {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public PendingIntent createCurrentContentIntent(Player player) {
+        return null;
+    }
 }
