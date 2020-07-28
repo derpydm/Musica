@@ -65,7 +65,7 @@
         android:layout_marginEnd="16dp"
 
         android:text="No song playing"
-        app:layout_constraintEnd_toStartOf="@+id/music_play_button"
+        app:layout_constraintEnd_toStartOf="@+id/now_playing_playerview"
         app:layout_constraintStart_toEndOf="@+id/popupAlbumImage"
         app:layout_constraintTop_toBottomOf="@+id/musicRecyclerView" />
 
@@ -78,13 +78,13 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/music_play_button"
+        app:layout_constraintEnd_toStartOf="@+id/now_playing_playerview"
         app:layout_constraintStart_toEndOf="@+id/popupAlbumImage"
         app:layout_constraintTop_toBottomOf="@+id/popupTitle" />
 
 
     <com.google.android.exoplayer2.ui.PlayerControlView
-        android:id="@+id/music_play_button"
+        android:id="@+id/now_playing_playerview"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         app:controller_layout_id="@layout/custom_controls"

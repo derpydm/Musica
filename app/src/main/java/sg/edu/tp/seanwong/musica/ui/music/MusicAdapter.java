@@ -25,8 +25,10 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
     private OnUpdateListener listener;
     public interface OnUpdateListener {
         void updatePopupText(Song song);
-        void updatePlayButtonState(boolean isPlaying);
-        void setMusicStartPlaying();
+    }
+
+    public ArrayList<Song> getmSongs() {
+        return mSongs;
     }
     public class ViewHolder extends RecyclerView.ViewHolder {
         // Your holder should contain a member variable
@@ -110,16 +112,13 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
     // Start service to play music and queue all following tracks
     private void playMusic(final int position) {
         // Add every song besides the ones before it
-        queue = new ArrayList<>();
-        queue.addAll(0, mSongs.subList(position, mSongs.size()));
-        listener.setMusicStartPlaying();
+        queue = mSongs;
         Intent intent = new Intent(context, MusicService.class);
         ArrayList<Song> q = new ArrayList<>(queue);
-        Log.d("Songs queue", queue.toString());
         intent.putParcelableArrayListExtra("queue", q);
         intent.putExtra("currentIndex", position);
+        listener.updatePopupText(queue.get(position));
         intent.setAction(MusicService.ACTION_START_PLAY);
-        listener.updatePopupText(queue.get(0));
         context.startService(intent);
     }
 

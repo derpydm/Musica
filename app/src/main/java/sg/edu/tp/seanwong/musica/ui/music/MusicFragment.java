@@ -2,25 +2,19 @@ package sg.edu.tp.seanwong.musica.ui.music;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -40,23 +34,19 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
+import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.ui.PlayerControlView;
 
-import org.w3c.dom.Text;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
-import sg.edu.tp.seanwong.musica.MainActivity;
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateListener {
-
+    //TODO make this thing bind to service and actually update with a proper song after swapping from other views
     public static MusicFragment newInstance() {
         return new MusicFragment();
     }
@@ -84,11 +74,11 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            // After binding to service, we attach our views and listeners to the player
             MusicService.ServiceBinder binder = (MusicService.ServiceBinder) iBinder;
             musicService = binder.getService();
             isBound = true;
             initPlayer();
-            Log.d("Music Fragment", musicService.getplayerInstance().toString());
         }
 
         @Override
@@ -98,8 +88,28 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     };
 
     private void initPlayer() {
-        SimpleExoPlayer player = musicService.getplayerInstance();
+        final SimpleExoPlayer player = musicService.getplayerInstance();
         playOrPauseButton.setPlayer(player);
+        Player.EventListener el = new Player.EventListener() {
+            @Override
+            public void onTimelineChanged(Timeline timeline, int reason) {
+
+            }
+
+            @Override
+            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+
+            }
+
+            @Override
+            public void onPositionDiscontinuity(int reason) {
+                // Get new song, update popup text
+                int currentIndex = player.getCurrentWindowIndex();
+                Song currentSong = musicAdapter.getmSongs().get(currentIndex);
+                updatePopupText(currentSong);
+            }
+        };
+        player.addListener(el);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -119,7 +129,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         popupAlbumArt = root.findViewById(R.id.popupAlbumImage);
         popupArtist = root.findViewById(R.id.popupArtist);
         popupTitle = root.findViewById(R.id.popupTitle);
-        playOrPauseButton = root.findViewById(R.id.music_play_button);
+        playOrPauseButton = root.findViewById(R.id.now_playing_playerview);
         playOrPauseButton.setShowTimeoutMs(0);
 
         // Register touch listener for button
@@ -131,7 +141,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
                     Log.d("music player", "button touch event triggered!");
                     SimpleExoPlayer player = musicService.getplayerInstance();
                     ImageButton bt = (ImageButton) v;
-                    Log.d("view id",String.valueOf(v.getId()));
                 }
                 return false;
             }
@@ -143,7 +152,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             songs = Song.getAllAudioFromDevice(getContext());
             setupRecyclerView(songs);
         } else {
-            // Ask for external fs r/w permission
+            // Ask for external fs r/w and foreground service permission (if needed)
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.FOREGROUND_SERVICE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
         }
 
@@ -158,7 +167,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
     }
 
-
+    // OVERRIDES
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions,
@@ -166,7 +175,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     {
         if (requestCode == MusicFragment.EXTERNAL_STORAGE_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Pop a toast to inform user
+                // Permissions were granted
                 Toast.makeText(getActivity(),
                         "External storage permissions granted",
                         Toast.LENGTH_SHORT)
@@ -213,38 +222,9 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         }
     }
 
-    @Override
-    public void updatePlayButtonState(boolean wasPlaying) {
-        if (wasPlaying) {
-            // Music was playing and about to pause, set button to play
-            Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_play_circle_filled_24px);
 
 
-        } else {
-            // Music was paused and going to play, set button to pause
-            Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_pause_circle_filled_24px);
-
-        }
-    }
-
-    @Override
-    public void setMusicStartPlaying() {
-        // Music just started playing, set button to pause
-        Drawable d = ContextCompat.getDrawable(getContext(), R.drawable.ic_pause_circle_filled_24px);
-    }
 
 
-    public void playOrPauseMusicHandler(boolean isPlaying) {
-        // Play or pause the music. Depends on view state, if music is playing we pause it.
-        Intent intent = new Intent(getContext(), MusicService.class);
-        if (isPlaying) {
-            updatePlayButtonState(isPlaying);
-            intent.setAction(MusicService.ACTION_PAUSE);
-        } else {
-            updatePlayButtonState(isPlaying);
-            intent.setAction(MusicService.ACTION_PLAY);
-        }
-        getContext().startService(intent);
-    }
 
 }

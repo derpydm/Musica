@@ -20,14 +20,18 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.ProgressiveMediaSource;
+import com.google.android.exoplayer2.source.ShuffleOrder;
 import com.google.android.exoplayer2.ui.PlayerNotificationManager;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.util.Util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -44,6 +48,7 @@ public class MusicService extends Service implements
 
     public static final String CHANNEL_ID = "Musica_Notification_Channel";
     public static final int NOTIFICATION_ID = 123477;
+    public static final String ACTION_BIND = "sg.edu.tp.seanwong.musica.MusicService.ACTION_BIND";
     public static final String ACTION_INIT = "sg.edu.tp.seanwong.musica.MusicService.ACTION_INIT";
     public static final String ACTION_START_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY";
     public static final String ACTION_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PLAY";
@@ -55,6 +60,7 @@ public class MusicService extends Service implements
     public static final String MUSIC_NEXT_SONG = "sg.edu.tp.seanwong.musica.MusicService.MUSIC_NEXT_SONG";
     public static final String MUSIC_ENDED = "sg.edu.tp.seanwong.musica.MusicService.MUSIC_ENDED";
     ArrayList<Song> queue;
+    ConcatenatingMediaSource cms;
 
     // Get binder for service
     // Not sure if needed as of right now
@@ -81,9 +87,91 @@ public class MusicService extends Service implements
         return mp;
     }
 
+    public Song getCurrentSong() {
+        return queue.get(currentIndex);
+    }
+
     private void startPlayer() {
         final Context context = this;
         mp = new SimpleExoPlayer.Builder(context).build();
+    }
+
+    private void loadMusic() {
+        DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, "Musica"));
+        // get the first song, ConcatenatingMediaSource asserts that media list is not null
+        Song first = queue.get(0);
+        MediaSource firstMS = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(first.getPath()));
+        cms = new ConcatenatingMediaSource(false, true, new ShuffleOrder.DefaultShuffleOrder(queue.size()), firstMS);
+        Iterator it = queue.subList(1,queue.size()).iterator();
+        while (it.hasNext()) {
+            Song song = (Song) it.next();
+            MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(song.getPath()));
+            cms.addMediaSource(mediaSource);
+        }
+
+    }
+
+    private void startListener() {
+        SimpleExoPlayer.EventListener el = new Player.EventListener() {
+            @Override
+            public void onTimelineChanged(Timeline timeline, int reason) {
+
+            }
+
+            @Override
+            public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+
+            }
+
+            @Override
+            public void onPositionDiscontinuity(int reason) {
+                // We have to update the players now, the last song stopped playing
+                currentIndex = mp.getCurrentWindowIndex();
+                playerNotificationManager.invalidate();
+
+            }
+        };
+        mp.addListener(el);
+    }
+    private void startNotification() {
+        playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(this, CHANNEL_ID, R.string.notification_name, R.string.notification_desc, NOTIFICATION_ID, this, new PlayerNotificationManager.NotificationListener() {
+            @Override
+            public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
+
+                startForeground(notificationId, notification);
+            }
+            @Override
+            public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
+                stopSelf();
+            }
+        });
+        playerNotificationManager.setUseNavigationActions(true);
+        playerNotificationManager.setUseNavigationActionsInCompactView(true);
+        playerNotificationManager.setRewindIncrementMs(0);
+        playerNotificationManager.setFastForwardIncrementMs(0);
+        playerNotificationManager.setPlayer(mp);
+    }
+
+    private void pauseMusic() {
+        // Pause the current song, we assume that music is playing beforehand
+        mp.setPlayWhenReady(false);
+    }
+
+    public ArrayList<Song> getQueue() {
+        return queue;
+    }
+
+    // TODO: Make this work with the service
+    // TODO: Handle pausing and resuming at the timestamp
+    private void playMusic() {
+        // Get the song that should be playing
+        Song song = queue.get(currentIndex);
+        Uri songUri = Uri.parse(song.getPath());
+        // Play the music here, regardless of whether any music was playing beforehand
+        // Stop any other tracks beforehand
+        mp.prepare(cms);
+        Log.d("currentIndex", String.valueOf(currentIndex));
+        mp.seekTo(currentIndex, 0);
         mp.setPlayWhenReady(true);
     }
 
@@ -98,11 +186,13 @@ public class MusicService extends Service implements
         switch (action) {
             case ACTION_INIT:
                 startNotification();
+                startListener();
                 break;
             case ACTION_START_PLAY:
                 // Indicates that the queue needs to be reset and it is bundled with the extras.
                 queue = intent.getParcelableArrayListExtra("queue");
-                currentIndex = intent.getIntExtra("currentValue",0);
+                currentIndex = intent.getIntExtra("currentIndex",0);
+                loadMusic();
                 playMusic();
                 break;
             case ACTION_PLAY:
@@ -143,40 +233,7 @@ public class MusicService extends Service implements
         return binder;
     }
 
-    private void startNotification() {
-        playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(this, CHANNEL_ID, R.string.notification_name, R.string.notification_desc, NOTIFICATION_ID, this, new PlayerNotificationManager.NotificationListener() {
-            @Override
-            public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
 
-                startForeground(notificationId, notification);
-            }
-            @Override
-            public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
-                stopSelf();
-            }
-        });
-        playerNotificationManager.setUseNavigationActions(true);
-        playerNotificationManager.setUseNavigationActionsInCompactView(true);
-        playerNotificationManager.setRewindIncrementMs(0);
-        playerNotificationManager.setFastForwardIncrementMs(0);
-        playerNotificationManager.setPlayer(mp);
-    }
-    private void pauseMusic() {
-        // Pause the current song, we assume that music is playing beforehand
-    }
-    // TODO: Make this work with the service
-    // TODO: Handle pausing and resuming at the timestamp
-    private void playMusic() {
-        // Get the song that should be playing
-        Song song = queue.get(currentIndex);
-        Uri songUri = Uri.parse(song.getPath());
-        // Play the music here, regardless of whether any music was playing beforehand
-        // Stop any other tracks beforehand
-        DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, "Musica"));
-        MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(songUri);
-        mp.prepare(mediaSource);
-
-    }
 
     @Override
     public String getCurrentContentTitle(Player player) {

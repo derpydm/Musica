@@ -110,9 +110,6 @@ public class Song implements Parcelable {
         return 0;
     }
 
-    // write your object's data to the passed-in Parcel
-
-
     // Regenerate song from parcel
     public static final Parcelable.Creator<Song> CREATOR = new Parcelable.Creator<Song>() {
         public Song createFromParcel(Parcel in) {
@@ -124,6 +121,7 @@ public class Song implements Parcelable {
         }
     };
 
+    // Write song to parcel to facilitate transfer through Intent
     @Override
     public void writeToParcel(Parcel out, int flags) {
         out.writeString(title);
