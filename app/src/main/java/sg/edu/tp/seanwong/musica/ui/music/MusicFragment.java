@@ -46,7 +46,6 @@ import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateListener {
-    //TODO make this thing bind to service and actually update with a proper song after swapping from other views
     public static MusicFragment newInstance() {
         return new MusicFragment();
     }
@@ -79,6 +78,12 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             musicService = binder.getService();
             isBound = true;
             initPlayer();
+            Song currentSong = musicService.getCurrentSong();
+            // Reupdate song info after regenerating the fragment
+            // If currentSong is null that means the service was just initialised
+            if (currentSong != null) {
+                updatePopupText(musicService.getCurrentSong());
+            }
         }
 
         @Override
@@ -202,7 +207,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
     }
 
-    @Override
     public void updatePopupText(Song song) {
         if (song != null) {
             Uri artworkUri = Uri.parse("content://media/external/audio/media/" + song.getAlbumId() + "/albumart");

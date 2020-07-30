@@ -40,7 +40,6 @@ import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicService extends Service implements
         PlayerNotificationManager.MediaDescriptionAdapter {
-    //TODO potential reimplementation using ExoPlayer which looks to be easier
     private SimpleExoPlayer mp;
     private final IBinder binder = new ServiceBinder();
     private PlayerNotificationManager playerNotificationManager;
@@ -63,7 +62,7 @@ public class MusicService extends Service implements
     ConcatenatingMediaSource cms;
 
     // Get binder for service
-    // Not sure if needed as of right now
+    // We use this binder to attach to the service from fragments
     public class ServiceBinder extends Binder {
         public MusicService getService()
         {
@@ -80,6 +79,7 @@ public class MusicService extends Service implements
         }
     }
 
+
     public SimpleExoPlayer getplayerInstance() {
         if (mp == null) {
             startPlayer();
@@ -88,7 +88,11 @@ public class MusicService extends Service implements
     }
 
     public Song getCurrentSong() {
-        return queue.get(currentIndex);
+        try {
+            return queue.get(currentIndex);
+        } catch (NullPointerException e) {
+            return null;
+        }
     }
 
     private void startPlayer() {
@@ -101,7 +105,7 @@ public class MusicService extends Service implements
         // get the first song, ConcatenatingMediaSource asserts that media list is not null
         Song first = queue.get(0);
         MediaSource firstMS = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(first.getPath()));
-        cms = new ConcatenatingMediaSource(false, true, new ShuffleOrder.DefaultShuffleOrder(queue.size()), firstMS);
+        cms = new ConcatenatingMediaSource(false, false, new ShuffleOrder.DefaultShuffleOrder(queue.size()), firstMS);
         Iterator it = queue.subList(1,queue.size()).iterator();
         while (it.hasNext()) {
             Song song = (Song) it.next();
@@ -161,8 +165,6 @@ public class MusicService extends Service implements
         return queue;
     }
 
-    // TODO: Make this work with the service
-    // TODO: Handle pausing and resuming at the timestamp
     private void playMusic() {
         // Get the song that should be playing
         Song song = queue.get(currentIndex);
@@ -229,7 +231,7 @@ public class MusicService extends Service implements
 
     @Override
     public IBinder onBind(Intent intent) {
-        //TODO for communication return IBinder implementation
+        // Return binder instance
         return binder;
     }
 

@@ -8,35 +8,41 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.Priority;
+import com.bumptech.glide.RequestBuilder;
+import com.bumptech.glide.request.RequestOptions;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.PlayerControlView;
+import com.google.android.exoplayer2.util.RepeatModeUtil;
 
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import java.util.ArrayList;
 
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class NowPlayingFragment extends Fragment {
-    PlayerView pv;
+    PlayerControlView pv;
     MusicService musicService;
     boolean isBound = false;
-
+    TextView artistView;
+    TextView songTitleView;
+    TextView albumView;
+    ImageView albumArtView;
+    // TODO implement custom ShuffleOrder that keeps index of current song
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -45,6 +51,12 @@ public class NowPlayingFragment extends Fragment {
             musicService = binder.getService();
             isBound = true;
             initPlayer();
+            Song currentSong = musicService.getCurrentSong();
+            // Reupdate song info after regenerating the fragment
+            // If currentSong is null that means the service was just initialised
+            if (currentSong != null) {
+                updatePopupText(musicService.getCurrentSong());
+            };
         }
 
         @Override
@@ -53,16 +65,31 @@ public class NowPlayingFragment extends Fragment {
         }
     };
 
-    // TODO get this damn thing to not hide on start once music plays
     private void initPlayer() {
         final SimpleExoPlayer player = musicService.getplayerInstance();
         pv.setPlayer(player);
-        pv.setControllerShowTimeoutMs(0);
-        pv.setControllerHideOnTouch(false);
-        pv.setControllerAutoShow(true);
-        pv.setShowBuffering(false);
-        pv.setUseArtwork(true);
-        pv.setDefaultArtwork(getResources().getDrawable(R.drawable.ic_album_24px));
+        pv.setShowTimeoutMs(0);
+        pv.setShowShuffleButton(true);
+        pv.setRepeatToggleModes(RepeatModeUtil.REPEAT_TOGGLE_MODE_ALL | RepeatModeUtil.REPEAT_TOGGLE_MODE_ONE);
+        player.addListener(new Player.EventListener() {
+            @Override
+            public void onTimelineChanged(Timeline timeline, int reason) {
+
+            }
+
+            @Override
+            public void onPositionDiscontinuity(int reason) {
+                // Get new song, update popup text
+                int currentIndex = player.getCurrentWindowIndex();
+                Song currentSong = musicService.getQueue().get(currentIndex);
+                updatePopupText(currentSong);
+            }
+
+            @Override
+            public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
+
+            }
+        });
         };
 
     private void setupBinding() {
@@ -76,7 +103,30 @@ public class NowPlayingFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_now_playing, container, false);
         pv = root.findViewById(R.id.now_playing_playerview);
+        artistView = root.findViewById(R.id.now_playing_artist);
+        songTitleView = root.findViewById(R.id.now_playing_song);
+        albumView = root.findViewById(R.id.now_playing_album);
+        albumArtView = root.findViewById(R.id.now_playing_album_art);
         setupBinding();
         return root;
+    }
+
+    public void updatePopupText(Song song) {
+        if (song != null) {
+            Uri artworkUri = Uri.parse("content://media/external/audio/media/" + song.getAlbumId() + "/albumart");
+            RequestBuilder<Drawable> requestBuilder = Glide.with(albumArtView).load(artworkUri);
+            RequestOptions options = new RequestOptions()
+                    .centerCrop()
+                    .override(100,100)
+                    .placeholder(R.drawable.ic_album_24px)
+                    .error(R.drawable.ic_album_24px)
+                    .priority(Priority.HIGH);
+            requestBuilder
+                    .load(artworkUri)
+                    .apply(options)
+                    .into(albumArtView);
+            artistView.setText(song.getArtist());
+            songTitleView.setText(song.getTitle());
+        }
     }
 }
