@@ -12,13 +12,13 @@ public class CustomShuffleOrder extends ShuffleOrder.DefaultShuffleOrder {
 
     @Override
     public int getNextIndex(int index) {
-        if (super.getNextIndex(index) == C.INDEX_UNSET) {
+        if (index == getLength() - 1) {
+            // Stop playback when at the last unshuffled index
+            return C.INDEX_UNSET;
+        } else if (super.getNextIndex(index) == C.INDEX_UNSET) {
             // We're at the last shuffled index
             // Go to the first shuffled index
             return 0;
-        } else if (index == getLength() - 1) {
-            // Stop playback when at the last unshuffled index
-            return C.INDEX_UNSET;
         } else {
             return super.getNextIndex(index);
         }
@@ -26,12 +26,13 @@ public class CustomShuffleOrder extends ShuffleOrder.DefaultShuffleOrder {
 
     @Override
     public int getPreviousIndex(int index) {
-        if (super.getPreviousIndex(index) == C.INDEX_UNSET) {
-            // We're at the start of the shuffled indices
-            return getLastIndex();
-        } else if (index == 0) {
+        if (index == 0) {
             // Stop playback when at the first unshuffled index
             return C.INDEX_UNSET;
+        } else if (super.getPreviousIndex(index) == C.INDEX_UNSET) {
+            // We're at the start of the shuffled indices
+            // Go to the last shuffled index
+            return getLastIndex();
         } else {
             return super.getNextIndex(index);
         }
