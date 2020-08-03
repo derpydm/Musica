@@ -36,6 +36,8 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import sg.edu.tp.seanwong.musica.util.CustomShuffleOrder;
+import sg.edu.tp.seanwong.musica.util.Shuffle;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicService extends Service implements
@@ -105,7 +107,7 @@ public class MusicService extends Service implements
         // get the first song, ConcatenatingMediaSource asserts that media list is not null
         Song first = queue.get(0);
         MediaSource firstMS = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(first.getPath()));
-        cms = new ConcatenatingMediaSource(false, false, new ShuffleOrder.DefaultShuffleOrder(queue.size()), firstMS);
+        cms = new ConcatenatingMediaSource(false, false, new CustomShuffleOrder(queue.size(),currentIndex,queue.size()), firstMS);
         Iterator it = queue.subList(1,queue.size()).iterator();
         while (it.hasNext()) {
             Song song = (Song) it.next();
@@ -168,7 +170,6 @@ public class MusicService extends Service implements
     private void playMusic() {
         // Get the song that should be playing
         Song song = queue.get(currentIndex);
-        Uri songUri = Uri.parse(song.getPath());
         // Play the music here, regardless of whether any music was playing beforehand
         // Stop any other tracks beforehand
         mp.prepare(cms);
@@ -176,7 +177,6 @@ public class MusicService extends Service implements
         mp.seekTo(currentIndex, 0);
         mp.setPlayWhenReady(true);
     }
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
@@ -186,6 +186,9 @@ public class MusicService extends Service implements
         Log.d("Action", action);
 
         switch (action) {
+            case ACTION_BIND:
+                // Do nothing, a view is just binding
+                break;
             case ACTION_INIT:
                 startNotification();
                 startListener();
@@ -197,33 +200,9 @@ public class MusicService extends Service implements
                 loadMusic();
                 playMusic();
                 break;
-            case ACTION_PLAY:
-                // Behaviour for starting playback with queue loaded already (i.e from pause)
-                if (mp != null) {
-                    Log.d("music player", "play!");
-                    playMusic();
-                }
-                break;
-            case ACTION_PAUSE:
-                // Behaviour to pause music (assume music is playing)
-                if (mp != null) {
-                    Log.d("music player", "paused!");
-                }
-                break;
-            case ACTION_PREVIOUS:
-                // Behaviour to go to the previous song in the queue
-                break;
-            case ACTION_SKIP:
-                // Behaviour to go to the next song in the queue
-                break;
-            case ACTION_SHUFFLE:
-                // Behaviour to shuffle the entire queue
-                break;
-            case ACTION_REPEAT:
-                // Behaviour to repeat the current song
-                break;
             default:
                 // Something screwed up occured.
+                Log.e("Musica", "Undefined behaviour while service was called");
         }
 
         return START_STICKY;

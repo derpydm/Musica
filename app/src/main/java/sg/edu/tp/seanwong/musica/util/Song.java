@@ -8,8 +8,10 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.util.Log;
+
+import com.google.android.exoplayer2.source.ShuffleOrder;
+
 import java.util.ArrayList;
-import java.util.List;
 
 public class Song implements Parcelable {
     private String title;
@@ -18,6 +20,8 @@ public class Song implements Parcelable {
     private String album;
     private String artist;
     private long albumId;
+
+
 
     public Song(String title, String path, long length, String album, String artist, long albumId) {
         this.title = title;

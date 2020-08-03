@@ -42,7 +42,6 @@ public class NowPlayingFragment extends Fragment {
     TextView songTitleView;
     TextView albumView;
     ImageView albumArtView;
-    // TODO implement custom ShuffleOrder that keeps index of current song
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
