@@ -1,10 +1,14 @@
 package sg.edu.tp.seanwong.musica.ui.now_playing;
 
 import android.content.ComponentName;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -18,8 +22,6 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.Priority;
-import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
@@ -112,18 +114,31 @@ public class NowPlayingFragment extends Fragment {
 
     public void updatePopupText(Song song) {
         if (song != null) {
-            Uri artworkUri = Uri.parse("content://media/external/audio/media/" + song.getAlbumId() + "/albumart");
-            RequestBuilder<Drawable> requestBuilder = Glide.with(albumArtView).load(artworkUri);
+            // Init metadata retriever to get album art in bytes
+            MediaMetadataRetriever metaData = new MediaMetadataRetriever();
+            metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
+            // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
             RequestOptions options = new RequestOptions()
-                    .centerCrop()
-                    .override(100,100)
                     .placeholder(R.drawable.ic_album_24px)
+                    // Means there's no album art, use default album icon
                     .error(R.drawable.ic_album_24px)
-                    .priority(Priority.HIGH);
-            requestBuilder
-                    .load(artworkUri)
-                    .apply(options)
-                    .into(albumArtView);
+                    .fitCenter();
+            byte art[] = metaData.getEmbeddedPicture();
+            if (art != null) {
+                // Album art exists, we grab the artwork
+                Bitmap img = BitmapFactory.decodeByteArray(art,0,art.length);
+
+                Glide.with(getContext())
+                        .load(img)
+                        .apply(options)
+                        .into(albumArtView);
+            } else {
+                Glide.with(getContext())
+                        .load(R.drawable.ic_album_24px)
+                        .apply(options)
+                        .into(albumArtView);
+            }
+            albumView.setText(song.getAlbum());
             artistView.setText(song.getArtist());
             songTitleView.setText(song.getTitle());
         }

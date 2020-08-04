@@ -32,14 +32,6 @@ public class Song implements Parcelable {
         this.albumId = albumId;
     }
 
-    public String getFormattedTime(long position) {
-        long progressMinutes = ((position / 1000) / 60);
-        long progressSeconds = ((position / 1000) / 60);
-        long totalMinutes = ((length / 1000) / 60);
-        long totalSeconds = ((length / 1000) % 60);
-        return (String.format("%d", progressMinutes) + ":" + String.format("%d", progressSeconds) + "/" + String.format("%d", totalMinutes) + ":" + String.format("%d", totalSeconds));
-    }
-
     public String getTitle() {
         return title;
     }

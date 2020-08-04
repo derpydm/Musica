@@ -7,7 +7,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
 
@@ -31,8 +34,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.Priority;
-import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -209,18 +210,30 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
     public void updatePopupText(Song song) {
         if (song != null) {
-            Uri artworkUri = Uri.parse("content://media/external/audio/media/" + song.getAlbumId() + "/albumart");
-            RequestBuilder<Drawable> requestBuilder = Glide.with(popupAlbumArt).load(artworkUri);
+            // Init metadata retriever to get album art in bytes
+            MediaMetadataRetriever metaData = new MediaMetadataRetriever();
+            metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
+            // Set up options
             RequestOptions options = new RequestOptions()
-                    .centerCrop()
-                    .override(100,100)
                     .placeholder(R.drawable.ic_album_24px)
+                    // Means there's no album art, use default album icon
                     .error(R.drawable.ic_album_24px)
-                    .priority(Priority.HIGH);
-            requestBuilder
-                    .load(artworkUri)
-                    .apply(options)
-                    .into(popupAlbumArt);
+                    .fitCenter();
+            // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
+            byte art[] = metaData.getEmbeddedPicture();
+            if (art != null) {
+                // Album art exists, we grab the artwork
+                Bitmap img = BitmapFactory.decodeByteArray(art,0,art.length);
+                Glide.with(getContext())
+                        .load(img)
+                        .apply(options)
+                        .into(popupAlbumArt);
+            } else {
+                Glide.with(getContext())
+                        .load(R.drawable.ic_album_24px)
+                        .apply(options)
+                        .into(popupAlbumArt);
+            }
             popupArtist.setText(song.getArtist());
             popupTitle.setText(song.getTitle());
         }

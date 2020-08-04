@@ -1,9 +1,14 @@
 package sg.edu.tp.seanwong.musica.ui.music;
 
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,10 +16,11 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.Priority;
-import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.request.RequestOptions;
+
+import java.io.File;
 import java.util.ArrayList;
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
@@ -87,18 +93,31 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         TextView title = holder.musicSongTitle;
         TextView artist = holder.musicSongArtist;
         ImageView image = holder.musicSongImage;
-        Uri artworkUri = Uri.parse("content://media/external/audio/media/" + song.getAlbumId() + "/albumart");
-        RequestBuilder<Drawable> requestBuilder = Glide.with(image).load(artworkUri);
+
+        // Init metadata retriever to get album art in bytes
+        MediaMetadataRetriever metaData = new MediaMetadataRetriever();
+        metaData.setDataSource(context, Uri.parse(song.getPath()));
+
         RequestOptions options = new RequestOptions()
-                .centerCrop()
-                .override(100,100)
                 .placeholder(R.drawable.ic_album_24px)
+                // Means there's no album art, use default album icon
                 .error(R.drawable.ic_album_24px)
-                .priority(Priority.HIGH);
-        requestBuilder
-                .load(artworkUri)
-                .apply(options)
-                .into(image);
+                .fitCenter();
+        // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
+        byte art[] = metaData.getEmbeddedPicture();
+        if (art != null) {
+            // Album art exists, we grab the artwork
+            Bitmap img = BitmapFactory.decodeByteArray(art,0,art.length);
+            Glide.with(context)
+                    .load(img)
+                    .apply(options)
+                    .into(image);
+        } else {
+            Glide.with(context)
+                    .load(R.drawable.ic_album_24px)
+                    .apply(options)
+                    .into(image);
+        }
         artist.setText(song.getArtist());
         title.setText(song.getTitle());
         // Set click callback
