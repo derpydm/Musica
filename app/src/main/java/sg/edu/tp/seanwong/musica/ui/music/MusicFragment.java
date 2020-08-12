@@ -60,6 +60,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     ArrayList<Song> songs = new ArrayList<>();
     private boolean isBound = false;
     MusicService musicService;
+
     public boolean hasPermission() {
         // Check for external storage write perms
         if ((ContextCompat.checkSelfPermission(
@@ -109,10 +110,12 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
             @Override
             public void onPositionDiscontinuity(int reason) {
-                // Get new song, update popup text
-                int currentIndex = player.getCurrentWindowIndex();
-                Song currentSong = musicAdapter.getmSongs().get(currentIndex);
-                updatePopupText(currentSong);
+                if (musicAdapter != null) {
+                    // Get new song, update popup text
+                    int currentIndex = player.getCurrentWindowIndex();
+                    Song currentSong = musicAdapter.getmSongs().get(currentIndex);
+                    updatePopupText(currentSong);
+                }
             }
         };
         player.addListener(el);
@@ -162,6 +165,8 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.FOREGROUND_SERVICE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
         }
 
+        // Retain view instance in memory so that we don't have problems with fragment being unattached but the adapter is destroyed
+
         return root;
     }
 
@@ -174,6 +179,21 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     }
 
     // OVERRIDES
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setRetainInstance(true);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if(musicAdapter != null) {
+            musicAdapter = null;
+            rv.setAdapter(null);
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            @NonNull String[] permissions,
@@ -224,24 +244,15 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             if (art != null) {
                 // Album art exists, we grab the artwork
                 Bitmap img = BitmapFactory.decodeByteArray(art,0,art.length);
-                Glide.with(getContext())
-                        .load(img)
-                        .apply(options)
-                        .into(popupAlbumArt);
-            } else {
-                Glide.with(getContext())
-                        .load(R.drawable.ic_album_24px)
-                        .apply(options)
-                        .into(popupAlbumArt);
-            }
+                if (getContext() != null) {
+                    Glide.with(getContext())
+                            .load(img)
+                            .apply(options)
+                            .into(popupAlbumArt);
+                }
+            } // We don't change the artwork so the default image doesn't get converted into a bitmap and decreases in quality
             popupArtist.setText(song.getArtist());
             popupTitle.setText(song.getTitle());
         }
     }
-
-
-
-
-
-
 }

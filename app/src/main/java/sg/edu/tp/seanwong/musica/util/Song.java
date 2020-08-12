@@ -11,9 +11,10 @@ import android.util.Log;
 
 import com.google.android.exoplayer2.source.ShuffleOrder;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Song implements Parcelable {
+public class Song implements Parcelable, Serializable {
     private String title;
     private String path;
     private long length;

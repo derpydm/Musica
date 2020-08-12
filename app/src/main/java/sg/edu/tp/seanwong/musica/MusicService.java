@@ -42,14 +42,7 @@ public class MusicService extends Service implements
     public static final String ACTION_BIND = "sg.edu.tp.seanwong.musica.MusicService.ACTION_BIND";
     public static final String ACTION_INIT = "sg.edu.tp.seanwong.musica.MusicService.ACTION_INIT";
     public static final String ACTION_START_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY";
-    public static final String ACTION_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PLAY";
-    public static final String ACTION_PAUSE = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PAUSE";
-    public static final String ACTION_SKIP = "sg.edu.tp.seanwong.musica.MusicService.ACTION_SKIP";
-    public static final String ACTION_PREVIOUS = "sg.edu.tp.seanwong.musica.MusicService.ACTION_PREVIOUS";
-    public static final String ACTION_SHUFFLE = "sg.edu.tp.seanwong.musica.MusicService.ACTION_SHUFFLE";
-    public static final String ACTION_REPEAT = "sg.edu.tp.seanwong.musica.MusicService.ACTION_REPEAT";
-    public static final String MUSIC_NEXT_SONG = "sg.edu.tp.seanwong.musica.MusicService.MUSIC_NEXT_SONG";
-    public static final String MUSIC_ENDED = "sg.edu.tp.seanwong.musica.MusicService.MUSIC_ENDED";
+
     ArrayList<Song> queue;
     ConcatenatingMediaSource cms;
 
@@ -104,7 +97,6 @@ public class MusicService extends Service implements
             MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(song.getPath()));
             cms.addMediaSource(mediaSource);
         }
-
     }
 
     private void startListener() {
@@ -113,12 +105,10 @@ public class MusicService extends Service implements
             public void onTimelineChanged(Timeline timeline, int reason) {
 
             }
-
             @Override
             public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
 
             }
-
             @Override
             public void onPositionDiscontinuity(int reason) {
                 // We have to update the players now, the last song stopped playing

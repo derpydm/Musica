@@ -12,6 +12,7 @@
     <string name="menu_playlist">Playlist</string>
     <string name="text_no_music">Tracks in your library will be shown here.
     If you\'re seeing this message, you either didn\'t give External Storage permissions, or have no tracks in your library.</string>
-
+    <string name="text_no_playlists">It\'s looking a little lonely in here.
+    Why not add a new playlist?</string>
     <string name="home_second">Home Second</string>
 </resources>

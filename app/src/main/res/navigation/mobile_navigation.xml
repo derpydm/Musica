@@ -9,7 +9,7 @@
         android:id="@+id/nav_now_playing"
         android:name="sg.edu.tp.seanwong.musica.ui.now_playing.NowPlayingFragment"
         android:label="@string/menu_now_playing"
-        tools:layout="@layout/fragment_home">
+        tools:layout="@layout/fragment_settings">
     </fragment>
 
     <fragment

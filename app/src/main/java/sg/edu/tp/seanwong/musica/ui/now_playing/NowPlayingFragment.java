@@ -127,17 +127,13 @@ public class NowPlayingFragment extends Fragment {
             if (art != null) {
                 // Album art exists, we grab the artwork
                 Bitmap img = BitmapFactory.decodeByteArray(art,0,art.length);
-
-                Glide.with(getContext())
-                        .load(img)
-                        .apply(options)
-                        .into(albumArtView);
-            } else {
-                Glide.with(getContext())
-                        .load(R.drawable.ic_album_24px)
-                        .apply(options)
-                        .into(albumArtView);
-            }
+                if (getContext() != null) {
+                    Glide.with(getContext())
+                            .load(img)
+                            .apply(options)
+                            .into(albumArtView);
+                }
+            } // We don't change the artwork so the default image doesn't get converted into a bitmap and decreases in quality
             albumView.setText(song.getAlbum());
             artistView.setText(song.getArtist());
             songTitleView.setText(song.getTitle());

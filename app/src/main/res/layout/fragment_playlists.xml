@@ -6,17 +6,89 @@
     android:layout_height="match_parent"
     tools:context=".ui.settings.SettingsFragment">
 
-    <TextView
-        android:id="@+id/text_slideshow"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/playlistRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_height="match_parent"
+        android:layout_marginTop="48dp"
+        android:layout_marginBottom="100dp"
+        android:scrollbars="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <TextView
+        android:id="@+id/playlist_missingPlaylistText"
+        android:layout_width="0dp"
+        android:layout_height="67dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:gravity="center"
+        android:text="@string/text_no_playlists"
         android:textAlignment="center"
-        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/playlistRecyclerView"
+        app:layout_constraintTop_toTopOf="@+id/playlistRecyclerView"
+        tools:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/playlist_popupBackground"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/colorTint"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/playlistRecyclerView" />
+
+    <ImageView
+        android:id="@+id/playlist_popupAlbumImage"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/playlistRecyclerView"
+        app:srcCompat="@drawable/ic_album_24px" />
+
+    <TextView
+        android:id="@+id/playlist_popupTitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:text="No song playing"
+        app:layout_constraintEnd_toStartOf="@+id/playlist_now_playing_playerview"
+        app:layout_constraintStart_toEndOf="@+id/playlist_popupAlbumImage"
+        app:layout_constraintTop_toBottomOf="@+id/playlistRecyclerView" />
+
+    <TextView
+        android:id="@+id/playlist_popupArtist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/playlist_now_playing_playerview"
+        app:layout_constraintStart_toEndOf="@+id/playlist_popupAlbumImage"
+        app:layout_constraintTop_toBottomOf="@+id/playlist_popupTitle" />
+
+
+    <com.google.android.exoplayer2.ui.PlayerControlView
+        android:id="@+id/playlist_now_playing_playerview"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        app:controller_layout_id="@layout/custom_controls"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/playlist_popupBackground"
+        app:layout_constraintTop_toBottomOf="@+id/playlistRecyclerView" />
 </androidx.constraintlayout.widget.ConstraintLayout>
