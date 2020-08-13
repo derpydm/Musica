@@ -13,6 +13,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -66,6 +69,19 @@ public class NowPlayingFragment extends Fragment {
         }
     };
 
+    // Disable search
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        menu.clear();
+    }
+
     private void initPlayer() {
         final SimpleExoPlayer player = musicService.getplayerInstance();
         pv.setPlayer(player);
@@ -108,6 +124,7 @@ public class NowPlayingFragment extends Fragment {
         songTitleView = root.findViewById(R.id.now_playing_song);
         albumView = root.findViewById(R.id.now_playing_album);
         albumArtView = root.findViewById(R.id.now_playing_album_art);
+
         setupBinding();
         return root;
     }
@@ -119,7 +136,6 @@ public class NowPlayingFragment extends Fragment {
             metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
             // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
             RequestOptions options = new RequestOptions()
-                    .placeholder(R.drawable.ic_album_24px)
                     // Means there's no album art, use default album icon
                     .error(R.drawable.ic_album_24px)
                     .fitCenter();
@@ -133,7 +149,13 @@ public class NowPlayingFragment extends Fragment {
                             .apply(options)
                             .into(albumArtView);
                 }
-            } // We don't change the artwork so the default image doesn't get converted into a bitmap and decreases in quality
+            } else {
+                // This may be called when the listener is still registered but context will be null because it isn't on screen
+                // Null check for context, same as above
+                if (getContext() != null) {
+                    albumArtView.setImageDrawable(getResources().getDrawable(R.drawable.ic_album_24px, getContext().getTheme()));
+                }
+            }
             albumView.setText(song.getAlbum());
             artistView.setText(song.getArtist());
             songTitleView.setText(song.getTitle());

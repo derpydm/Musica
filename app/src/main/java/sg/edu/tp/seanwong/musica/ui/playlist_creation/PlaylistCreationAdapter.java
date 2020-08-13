@@ -43,8 +43,7 @@ public class PlaylistCreationAdapter extends RecyclerView.Adapter<PlaylistCreati
         // Inflate the custom layout
         View musicView = inflater.inflate(R.layout.musiclayout, parent, false);
         // Return a new holder instance
-        PlaylistCreationAdapter.ViewHolder viewHolder = new PlaylistCreationAdapter.ViewHolder(musicView);
-        return viewHolder;
+        return new PlaylistCreationAdapter.ViewHolder(musicView);
     }
 
     @Override
@@ -74,12 +73,7 @@ public class PlaylistCreationAdapter extends RecyclerView.Adapter<PlaylistCreati
                     .load(img)
                     .apply(options)
                     .into(image);
-        } else {
-            Glide.with(context)
-                    .load(R.drawable.ic_album_24px)
-                    .apply(options)
-                    .into(image);
-        }
+        } // Use standard vector srcCompat for default image if the art can't be found
         artist.setText(song.getArtist());
         title.setText(song.getTitle());
         // Set click callback

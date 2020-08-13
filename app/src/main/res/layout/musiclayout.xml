@@ -17,7 +17,7 @@
         android:layout_marginRight="4dp"
         android:layout_weight="1"
         android:scaleType="fitCenter"
-        app:srcCompat="@drawable/ic_launcher_background" />
+        app:srcCompat="@drawable/ic_album_24px" />
 
     <LinearLayout
         android:id="@+id/textLinearLayout"

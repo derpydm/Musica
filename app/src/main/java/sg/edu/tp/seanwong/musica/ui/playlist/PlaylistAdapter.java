@@ -8,9 +8,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -25,19 +28,24 @@ import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Playlist;
 import sg.edu.tp.seanwong.musica.util.Song;
 
-public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.ViewHolder> {
+public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.ViewHolder> implements Filterable {
     Context context;
     private sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.OnUpdateListener listener;
-
+    String search = "";
     public interface OnUpdateListener {
         void updatePopupText(Song song);
         void makeMissingTextVisible();
+        void updateTitleWithSearch(String search);
     }
 
     public ArrayList<Playlist> getmPlaylists() {
         return mPlaylists;
     }
-    public void setmPlaylists(ArrayList<Playlist> mPlaylists) { this.mPlaylists = mPlaylists; }
+    public void setmPlaylists(ArrayList<Playlist> mPlaylists) {
+        this.mPlaylists = mPlaylists;
+        // Filter the playlists with the necesscary search
+        getFilter().filter(search);
+    }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         // Your holder should contain a member variable
@@ -58,13 +66,18 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         }
     }
 
-    // Store a member variable for the songs
-    // This is a reference to ALL songs
+    // Store a member variable for the playlists
+    // This is a reference to ALL playlists
     private ArrayList<Playlist> mPlaylists;
+
+    // Filtered playlists list
+    private ArrayList<Playlist> filteredPlaylists;
     // Index of current queue progress
     private int currentIndex = 0;
     // Pass in the contact array into the constructor
     public PlaylistAdapter(ArrayList<Playlist> playlists, Context context, sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.OnUpdateListener listener) {
+        // Set to new instance as the array is passed by reference, and we need two seperate array lists
+        filteredPlaylists = new ArrayList<>(playlists);
         mPlaylists = playlists;
         this.listener = listener;
         this.context = context;
@@ -89,7 +102,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     @Override
     public void onBindViewHolder(sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.ViewHolder holder, final int position) {
         // Get the playlist based on position
-        final Playlist playlist = mPlaylists.get(position);
+        final Playlist playlist = filteredPlaylists.get(position);
         // Set info
         TextView title = holder.musicSongTitle;
         ImageView image = holder.musicSongImage;
@@ -98,7 +111,6 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
                 // Means there's no album art, use default album icon
                 .error(R.drawable.ic_album_24px)
                 .fitCenter();
-
 
         // Init metadata retriever to get album art in bytes
         MediaMetadataRetriever metaData = new MediaMetadataRetriever();
@@ -116,7 +128,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
                         .apply(options)
                         .into(image);
             }
-        } // We just use the default drawable for no image as that's a vector and higher resolution
+        } // Use standard vector srcCompat for default image if the art can't be found
         title.setText(playlist.getName());
         // Set click callback
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -156,19 +168,21 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     private void playPlaylist(final int position) {
         // Add every song in the playlist
         Intent intent = new Intent(context, MusicService.class);
-        ArrayList<Song> q = mPlaylists.get(position).getSongs();
-        intent.putParcelableArrayListExtra("queue", q);
+        Playlist selectedPlaylist = filteredPlaylists.get(position);
+        ArrayList<Song> queue = selectedPlaylist.getSongs();
+        intent.putParcelableArrayListExtra("queue", queue);
         intent.putExtra("currentIndex", 0);
-        listener.updatePopupText(mPlaylists.get(position).getSongs().get(0));
+        listener.updatePopupText(queue.get(0));
         intent.setAction(MusicService.ACTION_START_PLAY);
         context.startService(intent);
     }
 
     // Delete playlist
     private void deletePlaylist(final int position) {
-        Playlist deletedPlaylist = mPlaylists.get(position);
+        Playlist deletedPlaylist = filteredPlaylists.get(position);
         Playlist.deletePlaylistFile(context, deletedPlaylist.getName());
-        mPlaylists.remove(position);
+        filteredPlaylists.remove(position);
+        mPlaylists.remove(deletedPlaylist);
         this.notifyDataSetChanged();
         if (mPlaylists.size() == 0) {
             listener.makeMissingTextVisible();
@@ -178,6 +192,45 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     // Get total list length
     @Override
     public int getItemCount() {
-        return mPlaylists.size();
+        return filteredPlaylists.size();
+    }
+
+    // Implement filter for searching songs
+    @Override
+    public Filter getFilter() {
+        return new Filter() {
+            @Override
+            protected FilterResults performFiltering(CharSequence charSequence) {
+                String charString = charSequence.toString();
+                search = charString;
+                filteredPlaylists.clear();
+                Log.d("msongs on query", mPlaylists.toString());
+                ArrayList<Playlist> searchResults;
+                if (charString.isEmpty()) {
+                    searchResults = new ArrayList<>(mPlaylists);
+                } else {
+                    ArrayList<Playlist> filteredList = new ArrayList<>();
+                    for (Playlist row: mPlaylists) {
+                        // name match condition. this might differ depending on your requirement
+                        // here we are looking for title match
+                        if (row.getName().toLowerCase().contains(charString.toLowerCase())) {
+                            filteredList.add(row);
+                        }
+                    }
+                    searchResults = filteredList;
+                }
+                FilterResults filterResults = new FilterResults();
+                filterResults.count = searchResults.size();
+                filterResults.values = searchResults;
+                return filterResults;
+            }
+
+            @Override
+            protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+                filteredPlaylists = (ArrayList<Playlist>) filterResults.values;
+                listener.updateTitleWithSearch(charSequence.toString());
+                notifyDataSetChanged();
+            }
+        };
     }
 }

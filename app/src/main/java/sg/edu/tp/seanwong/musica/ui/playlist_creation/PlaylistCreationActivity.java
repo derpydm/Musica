@@ -43,18 +43,13 @@ public class PlaylistCreationActivity extends AppCompatActivity {
 
     public boolean hasPermission() {
         // Check for external storage write perms
-        Log.d("Perms check",String.valueOf(ContextCompat.checkSelfPermission(
-                this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
         if ((ContextCompat.checkSelfPermission(
                 getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
-    // TODO handle playlist saving using inbuilt methods
-    // TODO make popup for handling naming the playlist
     public void savePlaylistButtonClicked(View view) {
         if (playlistCreationAdapter.getSelectedSongs().size() == 0) {
             Toast.makeText(this,"You can't make an empty playlist!", Toast.LENGTH_SHORT).show();
@@ -63,9 +58,8 @@ public class PlaylistCreationActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Playlist Name");
 
-        // Set up the input
+        // Set up the text input
         final EditText input = new EditText(this);
-        // Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
 
@@ -76,9 +70,8 @@ public class PlaylistCreationActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String name = input.getText().toString();
-
                 if (name.length() == 0) {
-                    // User did not enter anything, show notice saying you can't do that
+                    // User did not enter anything, show notice saying you can't do that and exit early
                     AlertDialog.Builder builder2 = new AlertDialog.Builder(ctx);
                     builder2.setTitle("You can't have an empty name!");
                     builder2.setNegativeButton("OK", new DialogInterface.OnClickListener() {

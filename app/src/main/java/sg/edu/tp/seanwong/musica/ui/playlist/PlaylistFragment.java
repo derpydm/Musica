@@ -25,11 +25,15 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
@@ -46,6 +50,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 
+import sg.edu.tp.seanwong.musica.MainActivity;
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.ui.playlist_creation.PlaylistCreationActivity;
@@ -59,6 +64,8 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
     RecyclerView rv;
     TextView popupTitle;
     TextView popupArtist;
+    TextView missingText;
+    SearchView searchView;
     ImageView popupAlbumArt;
     PlayerControlView playOrPauseButton;
     PlaylistAdapter playlistAdapter;
@@ -66,9 +73,6 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
     private boolean isBound = false;
     MusicService musicService;
     SimpleExoPlayer player;
-
-    // TODO update adapter once new playlist is created
-    // TODO actually implement playlist addition transition
 
     private ServiceConnection connection = new ServiceConnection() {
         @Override
@@ -135,7 +139,7 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         popupArtist = root.findViewById(R.id.playlist_popupArtist);
         popupTitle = root.findViewById(R.id.playlist_popupTitle);
         playOrPauseButton = root.findViewById(R.id.playlist_now_playing_playerview);
-        TextView missingText = root.findViewById(R.id.playlist_missingPlaylistText);
+        missingText = root.findViewById(R.id.playlist_missingPlaylistText);
         addPlaylistButton = root.findViewById(R.id.addPlaylistButton);
         playOrPauseButton.setShowTimeoutMs(0);
         // Register touch listener for play/pause button
@@ -166,28 +170,35 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             }
         });
 
+        // Set up recycler view with playlists
+        ArrayList<Playlist> playlists = loadPlaylists();
+        setupRecyclerView(playlists);
+
+        // If there's no playlists loaded in we set the text to be visible
+        // This is because master playlists file will exist even if there are no playlists
+        if (playlists.size() > 0) {
+            missingText.setVisibility(View.INVISIBLE);
+        } else {
+            missingText.setVisibility(View.VISIBLE);
+        }
+        return root;
+    }
+
+    private ArrayList<Playlist> loadPlaylists() {
         // Attempt to load playlist names
         ArrayList<String> playlistNames = new ArrayList<>();
         try {
-            File origPlaylists = new File(getContext().getExternalFilesDir(null), "playlists");
+            File origPlaylists = new File(getContext().getExternalFilesDir(null), "playlists.bin");
             FileInputStream fileInputStream = new FileInputStream(origPlaylists);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             playlistNames = (ArrayList<String>) objectInputStream.readObject();
             objectInputStream.close();
-            // If there's no playlists loaded in we set the text to be visible
-            // This is because master playlists file will exist even if there are no playlists
-            if (playlistNames.size() > 0) {
-                missingText.setVisibility(View.INVISIBLE);
-            } else {
-                missingText.setVisibility(View.VISIBLE);
-            }
             fileInputStream.close();
         } catch (IOException | ClassNotFoundException e) {
             // No playlists were found
             e.printStackTrace();
             missingText.setVisibility(View.VISIBLE);
         }
-
         // Load the playlists
         ArrayList<Playlist> playlists = new ArrayList<>();
         for (String playlistName: playlistNames) {
@@ -196,10 +207,8 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
                 playlists.add(playlist);
             }
         }
-        setupRecyclerView(playlists);
-        return root;
+        return playlists;
     }
-
 
     public void setupRecyclerView(ArrayList<Playlist> playlists) {
         // Get list
@@ -222,7 +231,6 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             playlistAdapter.setmPlaylists(playlists);
             playlistAdapter.notifyDataSetChanged();
             if (playlists.size() > 0) {
-                TextView missingText = getActivity().findViewById(R.id.playlist_missingPlaylistText);
                 missingText.setVisibility(View.INVISIBLE);
             }
         }
@@ -241,8 +249,45 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        setHasOptionsMenu(true);
     }
 
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        // Associate searchable configuration with the SearchView
+        searchView = (SearchView) menu.findItem(R.id.search_action).getActionView();
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+
+        // listening to search query text change
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                // filter recycler view when query submitted
+                playlistAdapter.getFilter().filter(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String query) {
+                // filter recycler view when text is changed
+                playlistAdapter.getFilter().filter(query);
+                return false;
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.search_action) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -270,7 +315,13 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
                             .apply(options)
                             .into(popupAlbumArt);
                 }
-            } // We don't change the artwork so the default image doesn't get converted into a bitmap and decreases in quality
+            } else {
+                // This may be called when the listener is still registered but context will be null because it isn't on screen
+                // Null check for context, same as above
+                if (getContext() != null) {
+                    popupAlbumArt.setImageDrawable(getResources().getDrawable(R.drawable.ic_album_24px, getContext().getTheme()));
+                }
+            }
             popupArtist.setText(song.getArtist());
             popupTitle.setText(song.getTitle());
         }
@@ -280,5 +331,15 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
     public void makeMissingTextVisible() {
         TextView missingText = getActivity().findViewById(R.id.playlist_missingPlaylistText);
         missingText.setVisibility(View.VISIBLE);
+    }
+
+    public void updateTitleWithSearch(String search) {
+        MainActivity ac = (MainActivity) getActivity();
+        if (!search.isEmpty()) {
+            ac.getSupportActionBar().setTitle("Search: " + search);
+        } else {
+            ac.getSupportActionBar().setTitle("Playlists");
+        }
+
     }
 }

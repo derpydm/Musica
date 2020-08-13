@@ -40,7 +40,7 @@ public class Playlist implements Serializable, Parcelable {
                 context.getExternalFilesDir(null).mkdir();
             }
             // Write playlist object to a file
-            File outputFile = new File(context.getExternalFilesDir(null), this.name);
+            File outputFile = new File(context.getExternalFilesDir(null), this.name + ".playlist");
             if (!outputFile.exists()) {
                 outputFile.createNewFile();
             }
@@ -53,7 +53,7 @@ public class Playlist implements Serializable, Parcelable {
             // Make playlist list aware a new playlist has been added
             // 1. Open input for playlists file so we can append the new playlist
             ArrayList<String> playlistNames = new ArrayList<>();
-            File origPlaylists = new File(context.getExternalFilesDir(null), "playlists");
+            File origPlaylists = new File(context.getExternalFilesDir(null), "playlists.bin");
             if (!origPlaylists.exists()) {
                 // Don't read, just create the file
                 origPlaylists.createNewFile();
@@ -85,7 +85,7 @@ public class Playlist implements Serializable, Parcelable {
     // Creates an object by reading it from a file
     public static Playlist readFromFile(Context context, String playlistName) {
         Playlist playlist = null;
-        File file = new File(context.getExternalFilesDir(null),playlistName);
+        File file = new File(context.getExternalFilesDir(null),playlistName + ".playlist");
         try {
             FileInputStream fileInputStream = new FileInputStream(file);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
@@ -108,7 +108,7 @@ public class Playlist implements Serializable, Parcelable {
         }
         // Load up master playlists file and delete the playlist
         ArrayList<String> playlistNames;
-        File origPlaylists = new File(context.getExternalFilesDir(null), "playlists");
+        File origPlaylists = new File(context.getExternalFilesDir(null), "playlists.bin");
         try {
             FileInputStream fileInputStream = new FileInputStream(origPlaylists);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);

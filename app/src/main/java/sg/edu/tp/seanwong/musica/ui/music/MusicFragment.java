@@ -2,6 +2,7 @@ package sg.edu.tp.seanwong.musica.ui.music;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.SearchManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +10,6 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Bundle;
@@ -25,11 +25,15 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,6 +46,7 @@ import com.google.android.exoplayer2.ui.PlayerControlView;
 
 import java.util.ArrayList;
 
+import sg.edu.tp.seanwong.musica.MainActivity;
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
@@ -50,11 +55,12 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     public static MusicFragment newInstance() {
         return new MusicFragment();
     }
-    public static final int EXTERNAL_STORAGE_REQUEST = 1;
+    public static final int EXTERNAL_STORAGE_REQUEST = 387;
     RecyclerView rv;
     TextView popupTitle;
     TextView popupArtist;
     ImageView popupAlbumArt;
+    SearchView searchView;
     PlayerControlView playOrPauseButton;
     MusicAdapter musicAdapter;
     ArrayList<Song> songs = new ArrayList<>();
@@ -64,8 +70,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     public boolean hasPermission() {
         // Check for external storage write perms
         if ((ContextCompat.checkSelfPermission(
-                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ContextCompat.checkSelfPermission(
-                getContext(), Manifest.permission.FOREGROUND_SERVICE) == PackageManager.PERMISSION_GRANTED)) {
+                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
             return true;
         } else {
             return false;
@@ -183,6 +188,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+        setHasOptionsMenu(true);
     }
 
     @Override
@@ -201,11 +207,13 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     {
         if (requestCode == MusicFragment.EXTERNAL_STORAGE_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permissions were granted
-                Toast.makeText(getActivity(),
-                        "External storage permissions granted",
-                        Toast.LENGTH_SHORT)
-                        .show();
+                if (requestCode == EXTERNAL_STORAGE_REQUEST) {
+                    // Permissions were granted, show toast
+                    Toast.makeText(getActivity(),
+                            "External storage permissions granted",
+                            Toast.LENGTH_SHORT)
+                            .show();
+                }
                 songs = Song.getAllAudioFromDevice(getContext());
                 setupRecyclerView(songs);
                 TextView missingLibraryView = getView().findViewById(R.id.musicSongMissingText);
@@ -228,6 +236,42 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
     }
 
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        // Associate searchable configuration with the SearchView
+        searchView = (SearchView) menu.findItem(R.id.search_action).getActionView();
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+
+        // listening to search query text change
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                // filter recycler view when query submitted
+                musicAdapter.getFilter().filter(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String query) {
+                // filter recycler view when text is changed
+                musicAdapter.getFilter().filter(query);
+                return false;
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.search_action) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
     public void updatePopupText(Song song) {
         if (song != null) {
             // Init metadata retriever to get album art in bytes
@@ -250,9 +294,25 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
                             .apply(options)
                             .into(popupAlbumArt);
                 }
-            } // We don't change the artwork so the default image doesn't get converted into a bitmap and decreases in quality
+            } else {
+                // This may be called when the listener is still registered but context will be null because it isn't on screen
+                // Null check for context, same as above
+                if (getContext() != null) {
+                    popupAlbumArt.setImageDrawable(getResources().getDrawable(R.drawable.ic_album_24px, getActivity().getTheme()));
+                }
+            }
             popupArtist.setText(song.getArtist());
             popupTitle.setText(song.getTitle());
         }
+    }
+
+    public void updateTitleWithSearch(String search) {
+        MainActivity ac = (MainActivity) getActivity();
+        if (!search.isEmpty()) {
+            ac.getSupportActionBar().setTitle("Search: " + search);
+        } else {
+            ac.getSupportActionBar().setTitle("Music");
+        }
+
     }
 }
