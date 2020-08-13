@@ -28,7 +28,7 @@ import sg.edu.tp.seanwong.musica.util.Song;
 public class PlaylistCreationAdapter extends RecyclerView.Adapter<PlaylistCreationAdapter.ViewHolder> {
 
     ArrayList<Song> mSongs;
-    ArrayList<Song> selectedSongs;
+    ArrayList<Song> selectedSongs = new ArrayList<>();
     Context context;
 
     public ArrayList<Song> getSelectedSongs() {
@@ -89,6 +89,7 @@ public class PlaylistCreationAdapter extends RecyclerView.Adapter<PlaylistCreati
                 @ColorInt int highlighted = Color.parseColor("#ffaaaaaa");
                 // If the song's already selected then remove it, if it's not then add it to the selected songs list
                 if (selectedSongs.contains(mSongs.get(position))) {
+                    holder.itemView.setBackgroundColor(Color.parseColor("#ffffff"));
                     selectedSongs.remove(mSongs.get(position));
                 } else {
                     holder.itemView.setBackgroundColor(highlighted);

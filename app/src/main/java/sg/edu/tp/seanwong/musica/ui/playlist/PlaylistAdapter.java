@@ -1,6 +1,8 @@
 package sg.edu.tp.seanwong.musica.ui.playlist;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -27,14 +29,15 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     Context context;
     private sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.OnUpdateListener listener;
 
-    // TODO implement playlist deletion on long press
     public interface OnUpdateListener {
         void updatePopupText(Song song);
+        void makeMissingTextVisible();
     }
 
     public ArrayList<Playlist> getmPlaylists() {
         return mPlaylists;
     }
+    public void setmPlaylists(ArrayList<Playlist> mPlaylists) { this.mPlaylists = mPlaylists; }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         // Your holder should contain a member variable
@@ -66,6 +69,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         this.listener = listener;
         this.context = context;
     }
+
 
     // Grab ViewHolder responsible for Views
     @Override
@@ -112,16 +116,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
                         .apply(options)
                         .into(image);
             }
-
-        } else {
-            if (context != null) {
-                Glide.with(context)
-                        .load(R.drawable.ic_album_24px)
-                        .apply(options)
-                        .into(image);
-            }
-
-        }
+        } // We just use the default drawable for no image as that's a vector and higher resolution
         title.setText(playlist.getName());
         // Set click callback
         holder.itemView.setOnClickListener(new View.OnClickListener() {
@@ -130,6 +125,32 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
                 playPlaylist(position);
             }
         });
+
+        // Set delete popup on long click
+        holder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setTitle("Delete Playlist");
+                builder.setMessage("Are you sure you want to delete this playlist?");
+                // Set up the buttons
+                builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        deletePlaylist(position);
+                    }
+                });
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+                builder.show();
+                return true;
+            }
+        });
+
     }
     // Start service to play music and queue all following tracks
     private void playPlaylist(final int position) {
@@ -141,6 +162,17 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         listener.updatePopupText(mPlaylists.get(position).getSongs().get(0));
         intent.setAction(MusicService.ACTION_START_PLAY);
         context.startService(intent);
+    }
+
+    // Delete playlist
+    private void deletePlaylist(final int position) {
+        Playlist deletedPlaylist = mPlaylists.get(position);
+        Playlist.deletePlaylistFile(context, deletedPlaylist.getName());
+        mPlaylists.remove(position);
+        this.notifyDataSetChanged();
+        if (mPlaylists.size() == 0) {
+            listener.makeMissingTextVisible();
+        }
     }
 
     // Get total list length

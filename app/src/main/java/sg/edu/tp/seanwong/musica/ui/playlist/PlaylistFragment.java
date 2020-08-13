@@ -1,6 +1,8 @@
 package sg.edu.tp.seanwong.musica.ui.playlist;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -26,6 +28,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -45,6 +48,7 @@ import java.util.ArrayList;
 
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
+import sg.edu.tp.seanwong.musica.ui.playlist_creation.PlaylistCreationActivity;
 import sg.edu.tp.seanwong.musica.util.Playlist;
 import sg.edu.tp.seanwong.musica.util.Song;
 
@@ -58,13 +62,14 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
     ImageView popupAlbumArt;
     PlayerControlView playOrPauseButton;
     PlaylistAdapter playlistAdapter;
-    ArrayList<Song> songs = new ArrayList<>();
+    ImageButton addPlaylistButton;
     private boolean isBound = false;
     MusicService musicService;
     SimpleExoPlayer player;
 
     // TODO update adapter once new playlist is created
     // TODO actually implement playlist addition transition
+
     private ServiceConnection connection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
@@ -131,8 +136,9 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         popupTitle = root.findViewById(R.id.playlist_popupTitle);
         playOrPauseButton = root.findViewById(R.id.playlist_now_playing_playerview);
         TextView missingText = root.findViewById(R.id.playlist_missingPlaylistText);
+        addPlaylistButton = root.findViewById(R.id.addPlaylistButton);
         playOrPauseButton.setShowTimeoutMs(0);
-        // Register touch listener for button
+        // Register touch listener for play/pause button
         playOrPauseButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -140,6 +146,21 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
                 if (event.getAction() == KeyEvent.ACTION_UP) {
                     Log.d("music player", "button touch event triggered!");
                     SimpleExoPlayer player = musicService.getplayerInstance();
+                    playOrPauseButton.setPlayer(player);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        // Register touch listener for add playlist button
+        addPlaylistButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == KeyEvent.ACTION_UP) {
+                    Intent intent = new Intent(getContext(), PlaylistCreationActivity.class);
+                    startActivityForResult(intent, 12345);
+                    return true;
                 }
                 return false;
             }
@@ -150,11 +171,15 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         try {
             File origPlaylists = new File(getContext().getExternalFilesDir(null), "playlists");
             FileInputStream fileInputStream = new FileInputStream(origPlaylists);
-            if (fileInputStream.available() > 0) {
-                ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-                playlistNames = (ArrayList<String>) objectInputStream.readObject();
-                objectInputStream.close();
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            playlistNames = (ArrayList<String>) objectInputStream.readObject();
+            objectInputStream.close();
+            // If there's no playlists loaded in we set the text to be visible
+            // This is because master playlists file will exist even if there are no playlists
+            if (playlistNames.size() > 0) {
                 missingText.setVisibility(View.INVISIBLE);
+            } else {
+                missingText.setVisibility(View.VISIBLE);
             }
             fileInputStream.close();
         } catch (IOException | ClassNotFoundException e) {
@@ -163,9 +188,8 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             missingText.setVisibility(View.VISIBLE);
         }
 
-        // Next we load the playlists
+        // Load the playlists
         ArrayList<Playlist> playlists = new ArrayList<>();
-        Log.d("List of playlists: ", playlistNames.toString());
         for (String playlistName: playlistNames) {
             Playlist playlist = Playlist.readFromFile(getContext(), playlistName);
             if (playlist != null) {
@@ -184,6 +208,24 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         rv.setAdapter(playlistAdapter);
         // Set layout manager
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 12345 && resultCode == Activity.RESULT_OK) {
+            // Playlist created successfully, load new playlist using name from Intent
+            String newPlaylistName = data.getStringExtra("playlistName");
+            Playlist newPlaylist = Playlist.readFromFile(getContext(), newPlaylistName);
+            ArrayList<Playlist> playlists = playlistAdapter.getmPlaylists();
+            playlists.add(newPlaylist);
+            playlistAdapter.setmPlaylists(playlists);
+            playlistAdapter.notifyDataSetChanged();
+            if (playlists.size() > 0) {
+                TextView missingText = getActivity().findViewById(R.id.playlist_missingPlaylistText);
+                missingText.setVisibility(View.INVISIBLE);
+            }
+        }
     }
 
     // OVERRIDES
@@ -234,9 +276,9 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         }
     }
 
-
-
-
-
-
+    // Make the missing text pop up
+    public void makeMissingTextVisible() {
+        TextView missingText = getActivity().findViewById(R.id.playlist_missingPlaylistText);
+        missingText.setVisibility(View.VISIBLE);
+    }
 }

@@ -85,8 +85,9 @@ public class Playlist implements Serializable, Parcelable {
     // Creates an object by reading it from a file
     public static Playlist readFromFile(Context context, String playlistName) {
         Playlist playlist = null;
+        File file = new File(context.getExternalFilesDir(null),playlistName);
         try {
-            FileInputStream fileInputStream = context.openFileInput(playlistName);
+            FileInputStream fileInputStream = new FileInputStream(file);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             playlist = (Playlist) objectInputStream.readObject();
             objectInputStream.close();
@@ -97,6 +98,36 @@ public class Playlist implements Serializable, Parcelable {
             e.printStackTrace();
         }
         return playlist;
+    }
+
+    public static void deletePlaylistFile(Context context, String playlistName) {
+        // Delete the playlist if it exists
+        File file = new File(context.getExternalFilesDir(null),playlistName);
+        if (file.exists()) {
+            file.delete();
+        }
+        // Load up master playlists file and delete the playlist
+        ArrayList<String> playlistNames;
+        File origPlaylists = new File(context.getExternalFilesDir(null), "playlists");
+        try {
+            FileInputStream fileInputStream = new FileInputStream(origPlaylists);
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            playlistNames = (ArrayList<String>) objectInputStream.readObject();
+            Log.d("Playlist names", playlistNames.toString());
+            playlistNames.remove(playlistName);
+            objectInputStream.close();
+            fileInputStream.close();
+
+            // Save the playlist names after deletion.
+            FileOutputStream playlistListStream =  new FileOutputStream(origPlaylists);
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(playlistListStream);
+            objectOutputStream.writeObject(playlistNames);
+            playlistListStream.close();
+            objectOutputStream.close();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public static final Creator<Playlist> CREATOR = new Creator<Playlist>() {
