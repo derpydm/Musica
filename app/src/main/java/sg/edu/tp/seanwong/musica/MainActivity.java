@@ -1,7 +1,9 @@
 package sg.edu.tp.seanwong.musica;
 
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.View;
 import android.view.Menu;
 
@@ -33,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_now_playing, R.id.nav_playlist, R.id.nav_settings, R.id.nav_music)
+                R.id.nav_now_playing, R.id.nav_playlist, R.id.nav_music)
                 .setDrawerLayout(drawer)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);

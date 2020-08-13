@@ -69,12 +69,8 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
     public boolean hasPermission() {
         // Check for external storage write perms
-        if ((ContextCompat.checkSelfPermission(
-                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)) {
-            return true;
-        } else {
-            return false;
-        }
+        return (ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
     }
 
     private ServiceConnection connection = new ServiceConnection() {
@@ -191,14 +187,19 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         setHasOptionsMenu(true);
     }
 
+    // Unbind from service to prevent memory leaks
     @Override
     public void onDestroy() {
-        super.onDestroy();
         if(musicAdapter != null) {
             musicAdapter = null;
             rv.setAdapter(null);
         }
+        if (isBound) {
+            getContext().unbindService(connection);
+        }
+        super.onDestroy();
     }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
@@ -207,13 +208,11 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     {
         if (requestCode == MusicFragment.EXTERNAL_STORAGE_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (requestCode == EXTERNAL_STORAGE_REQUEST) {
-                    // Permissions were granted, show toast
-                    Toast.makeText(getActivity(),
+                // Permissions were granted, show toast
+                Toast.makeText(getActivity(),
                             "External storage permissions granted",
                             Toast.LENGTH_SHORT)
                             .show();
-                }
                 songs = Song.getAllAudioFromDevice(getContext());
                 setupRecyclerView(songs);
                 TextView missingLibraryView = getView().findViewById(R.id.musicSongMissingText);

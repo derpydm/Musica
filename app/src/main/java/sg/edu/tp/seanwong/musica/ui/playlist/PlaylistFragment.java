@@ -244,6 +244,10 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             playlistAdapter = null;
             rv.setAdapter(null);
         }
+        // Unbind from service to prevent memory leaks
+        if (isBound) {
+            getContext().unbindService(connection);
+        }
     }
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {

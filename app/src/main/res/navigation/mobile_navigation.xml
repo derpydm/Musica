@@ -9,20 +9,15 @@
         android:id="@+id/nav_now_playing"
         android:name="sg.edu.tp.seanwong.musica.ui.now_playing.NowPlayingFragment"
         android:label="@string/menu_now_playing"
-        tools:layout="@layout/fragment_settings">
+        tools:layout="@layout/fragment_now_playing">
     </fragment>
 
     <fragment
         android:id="@+id/nav_playlist"
         android:name="sg.edu.tp.seanwong.musica.ui.playlist.PlaylistFragment"
         android:label="@string/menu_playlist"
-        tools:layout="@layout/fragment_now_playing" />
-
-    <fragment
-        android:id="@+id/nav_settings"
-        android:name="sg.edu.tp.seanwong.musica.ui.settings.SettingsFragment"
-        android:label="@string/menu_settings"
         tools:layout="@layout/fragment_playlists" />
+
     <fragment
         android:id="@+id/nav_music"
         android:name="sg.edu.tp.seanwong.musica.ui.music.MusicFragment"

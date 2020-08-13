@@ -1,14 +1,17 @@
 package sg.edu.tp.seanwong.musica;
 
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
 
@@ -42,7 +45,6 @@ public class MusicService extends Service implements
     public static final String ACTION_BIND = "sg.edu.tp.seanwong.musica.MusicService.ACTION_BIND";
     public static final String ACTION_INIT = "sg.edu.tp.seanwong.musica.MusicService.ACTION_INIT";
     public static final String ACTION_START_PLAY = "sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY";
-
     ArrayList<Song> queue;
     ConcatenatingMediaSource cms;
 
@@ -54,16 +56,6 @@ public class MusicService extends Service implements
             return MusicService.this;
         }
     }
-
-    private void freePlayer() {
-        // Null out player
-        if (mp != null) {
-            playerNotificationManager.setPlayer(null);
-            mp.release();
-            mp = null;
-        }
-    }
-
 
     public SimpleExoPlayer getplayerInstance() {
         if (mp == null) {
@@ -80,6 +72,10 @@ public class MusicService extends Service implements
         }
     }
 
+    public ArrayList<Song> getQueue() {
+        return queue;
+    }
+
     private void startPlayer() {
         final Context context = this;
         mp = new SimpleExoPlayer.Builder(context).build();
@@ -91,9 +87,7 @@ public class MusicService extends Service implements
         Song first = queue.get(0);
         MediaSource firstMS = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(first.getPath()));
         cms = new ConcatenatingMediaSource(false, false, new CustomShuffleOrder(queue.size(),currentIndex,queue.size()), firstMS);
-        Iterator it = queue.subList(1,queue.size()).iterator();
-        while (it.hasNext()) {
-            Song song = (Song) it.next();
+        for (Song song: queue.subList(1, queue.size())) {
             MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(song.getPath()));
             cms.addMediaSource(mediaSource);
         }
@@ -111,23 +105,32 @@ public class MusicService extends Service implements
             }
             @Override
             public void onPositionDiscontinuity(int reason) {
-                // We have to update the players now, the last song stopped playing
-                currentIndex = mp.getCurrentWindowIndex();
-                playerNotificationManager.invalidate();
-
+                // Update notification only if it exists for obvious reasons
+                if (playerNotificationManager != null) {
+                    currentIndex = mp.getCurrentWindowIndex();
+                    playerNotificationManager.invalidate();
+                }
             }
         };
         mp.addListener(el);
+    }
+
+    private void freePlayer() {
+        playerNotificationManager.setPlayer(null);
+        playerNotificationManager = null;
+        mp.stop();
+        mp.release();
+        stopForeground(true);
     }
     private void startNotification() {
         playerNotificationManager = PlayerNotificationManager.createWithNotificationChannel(this, CHANNEL_ID, R.string.notification_name, R.string.notification_desc, NOTIFICATION_ID, this, new PlayerNotificationManager.NotificationListener() {
             @Override
             public void onNotificationPosted(int notificationId, Notification notification, boolean ongoing) {
-
                 startForeground(notificationId, notification);
             }
             @Override
             public void onNotificationCancelled(int notificationId, boolean dismissedByUser) {
+                stopForeground(true);
                 stopSelf();
             }
         });
@@ -136,15 +139,6 @@ public class MusicService extends Service implements
         playerNotificationManager.setRewindIncrementMs(0);
         playerNotificationManager.setFastForwardIncrementMs(0);
         playerNotificationManager.setPlayer(mp);
-    }
-
-    private void pauseMusic() {
-        // Pause the current song, we assume that music is playing beforehand
-        mp.setPlayWhenReady(false);
-    }
-
-    public ArrayList<Song> getQueue() {
-        return queue;
     }
 
     private void playMusic() {
@@ -157,6 +151,14 @@ public class MusicService extends Service implements
         mp.seekTo(currentIndex, 0);
         mp.setPlayWhenReady(true);
     }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.cancel(NOTIFICATION_ID);
+        freePlayer();
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
@@ -193,8 +195,6 @@ public class MusicService extends Service implements
         // Return binder instance
         return binder;
     }
-
-
 
     @Override
     public String getCurrentContentTitle(Player player) {

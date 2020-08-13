@@ -86,8 +86,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         // Inflate the custom layout
         View musicView = inflater.inflate(R.layout.musiclayout, parent, false);
         // Return a new holder instance
-        ViewHolder viewHolder = new ViewHolder(musicView);
-        return viewHolder;
+        return new ViewHolder(musicView);
     }
 
 
@@ -168,7 +167,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
                         Log.d("Filtering song:", row.toString());
                         // name match condition. this might differ depending on your requirement
                         // here we are looking for title match
-                        if (row.getTitle().toLowerCase().contains(charString.toLowerCase())) {
+                        if (row.getTitle().toLowerCase().contains(charString.toLowerCase()) || row.getArtist().toLowerCase().contains(charString.toLowerCase())) {
                             Log.d("Row matched:", row.toString());
                             filteredList.add(row);
                         }

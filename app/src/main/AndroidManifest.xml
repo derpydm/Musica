@@ -26,19 +26,11 @@
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
             <intent-filter>
-
-
                 <action android:name="android.intent.action.SEARCH" />
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_INIT" />
                 <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_START_PLAY" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PLAY" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PAUSE" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_SKIP" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_PREVIOUS" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_NEXT" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_SHUFFLE" />
-                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_REPEAT" />
+                <action android:name="sg.edu.tp.seanwong.musica.MusicService.ACTION_BIND" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

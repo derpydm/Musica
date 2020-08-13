@@ -60,7 +60,7 @@ public class NowPlayingFragment extends Fragment {
             // If currentSong is null that means the service was just initialised
             if (currentSong != null) {
                 updatePopupText(musicService.getCurrentSong());
-            };
+            }
         }
 
         @Override
@@ -74,6 +74,15 @@ public class NowPlayingFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+    }
+
+    // Unbind from service to prevent memory leaks
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (isBound) {
+            getContext().unbindService(connection);
+        }
     }
 
     @Override
@@ -107,7 +116,7 @@ public class NowPlayingFragment extends Fragment {
 
             }
         });
-        };
+        }
 
     private void setupBinding() {
         // We send a Intent here with the purpose of binding to the currently running service.
