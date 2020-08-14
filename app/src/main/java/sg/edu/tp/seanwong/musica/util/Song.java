@@ -2,15 +2,11 @@ package sg.edu.tp.seanwong.musica.util;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.MergeCursor;
 import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.util.Log;
-
-import com.google.android.exoplayer2.source.ShuffleOrder;
-
 import java.io.Serializable;
 import java.util.ArrayList;
 
@@ -81,6 +77,7 @@ public class Song implements Parcelable, Serializable {
         this.albumId = albumId;
     }
     public static ArrayList<Song> getAllAudioFromDevice(final Context context) {
+
         final ArrayList<Song> tempAudioList = new ArrayList<>();
         Uri externalContentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
         String[] projection = {MediaStore.Audio.AudioColumns.DATA, MediaStore.Audio.AudioColumns.TITLE, MediaStore.Audio.AudioColumns.ALBUM, MediaStore.Audio.ArtistColumns.ARTIST, MediaStore.MediaColumns.DURATION, MediaStore.Audio.AudioColumns.ALBUM_ID};

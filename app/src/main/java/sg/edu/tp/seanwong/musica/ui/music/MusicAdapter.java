@@ -1,14 +1,9 @@
 package sg.edu.tp.seanwong.musica.ui.music;
-
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
-import android.net.Uri;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,11 +13,8 @@ import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-
-import java.io.File;
 import java.util.ArrayList;
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
@@ -32,8 +24,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
     Context context;
     private OnUpdateListener listener;
 
-
-
+    // Implement listener so that we can send changes to fragment
     public interface OnUpdateListener {
         void updatePopupText(Song song);
         void updateTitleWithSearch(String search);
@@ -52,10 +43,10 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         // We also create a constructor that accepts the entire item row
         // and does the view lookups to find each subview
         public ViewHolder(View itemView) {
+
             // Stores the itemView in a public final member variable that can be used
             // to access the context from any ViewHolder instance.
             super(itemView);
-
             musicSongArtist = itemView.findViewById(R.id.musicSongArtist);
             musicSongImage = itemView.findViewById(R.id.musicSongImage);
             musicSongTitle = itemView.findViewById(R.id.musicSongTitle);
@@ -66,7 +57,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
     // Store a member variable for the songs
     // This is a reference to ALL songs
     private ArrayList<Song> mSongs;
-    // Store member variable for filtered songs
+    // Store member variable for filtered songs through search
     private ArrayList<Song> filteredSongs;
 
     // Pass in the contact array into the constructor
@@ -89,8 +80,6 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         return new ViewHolder(musicView);
     }
 
-
-
     // Set up each recycled view with the proper info
     @Override
     public void onBindViewHolder(MusicAdapter.ViewHolder holder, final int position) {
@@ -100,11 +89,9 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         TextView title = holder.musicSongTitle;
         TextView artist = holder.musicSongArtist;
         ImageView image = holder.musicSongImage;
-        Log.d("mSongs bind view", mSongs.toString());
         // Init metadata retriever to get album art in bytes
         MediaMetadataRetriever metaData = new MediaMetadataRetriever();
-        metaData.setDataSource(context, Uri.parse(song.getPath()));
-
+        metaData.setDataSource(song.getPath());
         RequestOptions options = new RequestOptions()
                 .placeholder(R.drawable.ic_album_24px)
                 // Means there's no album art, use default album icon
@@ -136,6 +123,8 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
         int truePosition = mSongs.indexOf(filteredSongs.get(position));
         Intent intent = new Intent(context, MusicService.class);
         ArrayList<Song> q = new ArrayList<>(mSongs);
+
+        // Start service with queue
         intent.putParcelableArrayListExtra("queue", q);
         intent.putExtra("currentIndex", truePosition);
         listener.updatePopupText(filteredSongs.get(position));
@@ -157,18 +146,14 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.ViewHolder> 
             protected FilterResults performFiltering(CharSequence charSequence) {
                 String charString = charSequence.toString();
                 filteredSongs.clear();
-                Log.d("msongs on query", mSongs.toString());
                 ArrayList<Song> searchResults;
                 if (charString.isEmpty()) {
                     searchResults = new ArrayList<>(mSongs);
                 } else {
                     ArrayList<Song> filteredList = new ArrayList<>();
                     for (Song row: mSongs) {
-                        Log.d("Filtering song:", row.toString());
-                        // name match condition. this might differ depending on your requirement
-                        // here we are looking for title match
-                        if (row.getTitle().toLowerCase().contains(charString.toLowerCase()) || row.getArtist().toLowerCase().contains(charString.toLowerCase())) {
-                            Log.d("Row matched:", row.toString());
+                        // Match either album, title or artist
+                        if (row.getTitle().toLowerCase().contains(charString.toLowerCase()) || row.getArtist().toLowerCase().contains(charString.toLowerCase()) || row.getAlbum().toLowerCase().contains(charString.toLowerCase())) {
                             filteredList.add(row);
                         }
                     }

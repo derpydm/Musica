@@ -8,13 +8,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.InputType;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -22,19 +23,19 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
-
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Playlist;
 import sg.edu.tp.seanwong.musica.util.Song;
 
-public class PlaylistCreationActivity extends AppCompatActivity {
+public class PlaylistCreationActivity extends AppCompatActivity implements PlaylistCreationAdapter.OnUpdateListener {
     RecyclerView rv;
     TextView missingText;
+    SearchView searchView;
     PlaylistCreationAdapter playlistCreationAdapter;
 
     public void setupRecyclerView(ArrayList<Song> songList) {
         // Create adapter using songs, set adapter
-        playlistCreationAdapter = new PlaylistCreationAdapter(this, songList);
+        playlistCreationAdapter = new PlaylistCreationAdapter(this, songList, this);
         rv.setAdapter(playlistCreationAdapter);
 
         // Set layout manager
@@ -87,7 +88,7 @@ public class PlaylistCreationActivity extends AppCompatActivity {
                 // Save the playlist to file.
                 Playlist playlist = new Playlist(name, playlistCreationAdapter.getSelectedSongs());
                 playlist.saveToFile(ctx);
-                // Go back to playlist, store the playlist name for easier loading
+                // Go back to playlist, store the playlist name so that PlaylistFragment can load it in without reloading all playlists
                 Intent returnIntent = new Intent();
                 returnIntent.putExtra("playlistName", playlist.getName());
                 setResult(Activity.RESULT_OK, returnIntent);
@@ -105,11 +106,41 @@ public class PlaylistCreationActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate menu UI
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main, menu);
+
+        // Associate searchable configuration with the SearchView
+        searchView = (SearchView) menu.findItem(R.id.search_action).getActionView();
+        searchView.setMaxWidth(Integer.MAX_VALUE);
+
+        // listening to search query text change
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                // filter recycler view when query submitted
+                playlistCreationAdapter.getFilter().filter(query);
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String query) {
+                // filter recycler view when text is changed
+                playlistCreationAdapter.getFilter().filter(query);
+                return false;
+            }
+        });
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case android.R.id.home:
-
                 finish();
+                return true;
+            case R.id.search_action:
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -119,6 +150,8 @@ public class PlaylistCreationActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_playlist_creation);
+
+        // Set action bar
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         setTitle("Select Songs");
         rv = findViewById(R.id.playlistCreationRecyclerView);
@@ -138,5 +171,14 @@ public class PlaylistCreationActivity extends AppCompatActivity {
                 missingText.setVisibility(View.VISIBLE);
             }
         }
+    }
+
+    public void updateTitleWithSearch(String search) {
+        if (!search.isEmpty()) {
+            setTitle("Search: " + search);
+        } else {
+            setTitle("Select Songs");
+        }
+
     }
 }

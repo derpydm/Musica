@@ -52,9 +52,6 @@ import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
 
 public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateListener {
-    public static MusicFragment newInstance() {
-        return new MusicFragment();
-    }
     public static final int EXTERNAL_STORAGE_REQUEST = 387;
     RecyclerView rv;
     TextView popupTitle;
@@ -68,9 +65,10 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
     MusicService musicService;
 
     public boolean hasPermission() {
-        // Check for external storage write perms
-        return (ContextCompat.checkSelfPermission(
-                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED);
+        // Check for external storage read/write perms
+        return ((ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) && (ContextCompat.checkSelfPermission(
+                getContext(), Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED));
     }
 
     private ServiceConnection connection = new ServiceConnection() {
@@ -100,16 +98,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         playOrPauseButton.setPlayer(player);
         Player.EventListener el = new Player.EventListener() {
             @Override
-            public void onTimelineChanged(Timeline timeline, int reason) {
-
-            }
-
-            @Override
-            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-
-            }
-
-            @Override
             public void onPositionDiscontinuity(int reason) {
                 if (musicAdapter != null) {
                     // Get new song, update popup text
@@ -128,7 +116,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
                              @Nullable Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_music, container, false);
 
-        // Start music service and initialise notification for persistence
+        // Start music service with action to ready notification for persistence
         Intent intent = new Intent(getContext(), MusicService.class);
         intent.setAction(MusicService.ACTION_INIT);
         getContext().startService(intent);
@@ -142,20 +130,6 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         playOrPauseButton = root.findViewById(R.id.now_playing_playerview);
         playOrPauseButton.setShowTimeoutMs(0);
 
-        // Register touch listener for button
-        playOrPauseButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // Play/pause only when user releases the button
-                if (event.getAction() == KeyEvent.ACTION_UP) {
-                    Log.d("music player", "button touch event triggered!");
-                    SimpleExoPlayer player = musicService.getplayerInstance();
-                    ImageButton bt = (ImageButton) v;
-                }
-                return false;
-            }
-        });
-
         // Check for permissions
         if (hasPermission()) {
             // Load songs if permissions are available
@@ -163,7 +137,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
             setupRecyclerView(songs);
         } else {
             // Ask for external fs r/w and foreground service permission (if needed)
-            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.FOREGROUND_SERVICE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.FOREGROUND_SERVICE, Manifest.permission.READ_EXTERNAL_STORAGE}, MusicFragment.EXTERNAL_STORAGE_REQUEST);
         }
 
         // Retain view instance in memory so that we don't have problems with fragment being unattached but the adapter is destroyed
@@ -237,7 +211,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        // Associate searchable configuration with the SearchView
+
         searchView = (SearchView) menu.findItem(R.id.search_action).getActionView();
         searchView.setMaxWidth(Integer.MAX_VALUE);
 
@@ -275,7 +249,7 @@ public class MusicFragment extends Fragment implements MusicAdapter.OnUpdateList
         if (song != null) {
             // Init metadata retriever to get album art in bytes
             MediaMetadataRetriever metaData = new MediaMetadataRetriever();
-            metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
+            metaData.setDataSource(song.getPath());
             // Set up options
             RequestOptions options = new RequestOptions()
                     .placeholder(R.drawable.ic_album_24px)

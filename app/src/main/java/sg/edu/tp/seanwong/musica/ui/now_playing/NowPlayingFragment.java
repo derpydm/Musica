@@ -26,15 +26,10 @@ import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
-import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.ui.PlayerControlView;
 import com.google.android.exoplayer2.util.RepeatModeUtil;
-
-import java.util.ArrayList;
-
 import sg.edu.tp.seanwong.musica.MusicService;
 import sg.edu.tp.seanwong.musica.R;
 import sg.edu.tp.seanwong.musica.util.Song;
@@ -88,6 +83,7 @@ public class NowPlayingFragment extends Fragment {
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
+        // Clear the menu as we don't want to enable search
         menu.clear();
     }
 
@@ -99,21 +95,13 @@ public class NowPlayingFragment extends Fragment {
         pv.setRepeatToggleModes(RepeatModeUtil.REPEAT_TOGGLE_MODE_ALL | RepeatModeUtil.REPEAT_TOGGLE_MODE_ONE);
         player.addListener(new Player.EventListener() {
             @Override
-            public void onTimelineChanged(Timeline timeline, int reason) {
-
-            }
-
-            @Override
             public void onPositionDiscontinuity(int reason) {
                 // Get new song, update popup text
-                int currentIndex = player.getCurrentWindowIndex();
-                Song currentSong = musicService.getQueue().get(currentIndex);
-                updatePopupText(currentSong);
-            }
-
-            @Override
-            public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-
+                if (reason != Player.DISCONTINUITY_REASON_SEEK) {
+                    int currentIndex = player.getCurrentWindowIndex();
+                    Song currentSong = musicService.getQueue().get(currentIndex);
+                    updatePopupText(currentSong);
+                }
             }
         });
         }
@@ -125,6 +113,7 @@ public class NowPlayingFragment extends Fragment {
         getContext().startService(intent);
         getContext().bindService(intent, connection, Context.BIND_AUTO_CREATE);
     }
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.fragment_now_playing, container, false);
@@ -133,7 +122,6 @@ public class NowPlayingFragment extends Fragment {
         songTitleView = root.findViewById(R.id.now_playing_song);
         albumView = root.findViewById(R.id.now_playing_album);
         albumArtView = root.findViewById(R.id.now_playing_album_art);
-
         setupBinding();
         return root;
     }
@@ -142,7 +130,7 @@ public class NowPlayingFragment extends Fragment {
         if (song != null) {
             // Init metadata retriever to get album art in bytes
             MediaMetadataRetriever metaData = new MediaMetadataRetriever();
-            metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
+            metaData.setDataSource(song.getPath());
             // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
             RequestOptions options = new RequestOptions()
                     // Means there's no album art, use default album icon

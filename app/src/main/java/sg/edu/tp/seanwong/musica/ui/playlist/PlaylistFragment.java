@@ -89,6 +89,7 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
                 updatePopupText(musicService.getCurrentSong());
             }
         }
+
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             isBound = false;
@@ -99,16 +100,6 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         player = musicService.getplayerInstance();
         playOrPauseButton.setPlayer(player);
         Player.EventListener el = new Player.EventListener() {
-            @Override
-            public void onTimelineChanged(Timeline timeline, int reason) {
-
-            }
-
-            @Override
-            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
-
-            }
-
             @Override
             public void onPositionDiscontinuity(int reason) {
                 if (playlistAdapter != null) {
@@ -142,20 +133,6 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         missingText = root.findViewById(R.id.playlist_missingPlaylistText);
         addPlaylistButton = root.findViewById(R.id.addPlaylistButton);
         playOrPauseButton.setShowTimeoutMs(0);
-        // Register touch listener for play/pause button
-        playOrPauseButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                // Play/pause only when user releases the button
-                if (event.getAction() == KeyEvent.ACTION_UP) {
-                    Log.d("music player", "button touch event triggered!");
-                    SimpleExoPlayer player = musicService.getplayerInstance();
-                    playOrPauseButton.setPlayer(player);
-                    return true;
-                }
-                return false;
-            }
-        });
 
         // Register touch listener for add playlist button
         addPlaylistButton.setOnTouchListener(new View.OnTouchListener() {
@@ -202,8 +179,21 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         // Load the playlists
         ArrayList<Playlist> playlists = new ArrayList<>();
         for (String playlistName: playlistNames) {
+            // Load playlist
             Playlist playlist = Playlist.readFromFile(getContext(), playlistName);
             if (playlist != null) {
+                // Iterate through all songs, if a song is not present on filesystem we will remove it from the playlist
+                ArrayList<Song> songs = playlist.getSongs();
+                for (Song song: songs) {
+                    File songFile = new File(song.getPath());
+                    if (!songFile.exists()) {
+                        songs.remove(song);
+                        playlist.setSongs(songs);
+                        // Save playlist
+                        playlist.saveToFile(getContext());
+                    }
+                }
+                // Add playlist to list
                 playlists.add(playlist);
             }
         }
@@ -236,7 +226,6 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         }
     }
 
-    // OVERRIDES
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -249,6 +238,7 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             getContext().unbindService(connection);
         }
     }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -292,16 +282,12 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
         }
         return super.onOptionsItemSelected(item);
     }
-    @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-    }
 
     public void updatePopupText(Song song) {
         if (song != null) {
             // Init metadata retriever to get album art in bytes
             MediaMetadataRetriever metaData = new MediaMetadataRetriever();
-            metaData.setDataSource(getContext(), Uri.parse(song.getPath()));
+            metaData.setDataSource(song.getPath());
             // Set up options
             RequestOptions options = new RequestOptions()
                     .placeholder(R.drawable.ic_album_24px)

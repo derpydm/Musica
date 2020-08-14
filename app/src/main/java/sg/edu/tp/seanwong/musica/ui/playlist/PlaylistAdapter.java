@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
-import android.net.Uri;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,6 +31,8 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     Context context;
     private sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.OnUpdateListener listener;
     String search = "";
+
+    // Implement listener so that we can send changes to fragment
     public interface OnUpdateListener {
         void updatePopupText(Song song);
         void makeMissingTextVisible();
@@ -41,9 +42,10 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
     public ArrayList<Playlist> getmPlaylists() {
         return mPlaylists;
     }
+
     public void setmPlaylists(ArrayList<Playlist> mPlaylists) {
         this.mPlaylists = mPlaylists;
-        // Filter the playlists with the necesscary search
+        // Filter the playlists with the necessary search once playlist list is changed
         getFilter().filter(search);
     }
 
@@ -96,8 +98,6 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         return viewHolder;
     }
 
-
-
     // Set up each recycled view with the proper info
     @Override
     public void onBindViewHolder(sg.edu.tp.seanwong.musica.ui.playlist.PlaylistAdapter.ViewHolder holder, final int position) {
@@ -116,7 +116,9 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         MediaMetadataRetriever metaData = new MediaMetadataRetriever();
 
         // For the purposes of simplicity for each playlist the image will be the cover art of the first song
-        metaData.setDataSource(context, Uri.parse(playlist.getSongs().get(0).getPath()));
+        metaData.setDataSource(playlist.getSongs().get(0).getPath()
+
+        );
         // Encode the artwork into a byte array and then use BitmapFactory to turn it into a Bitmap to load
         byte art[] = metaData.getEmbeddedPicture();
         if (art != null) {
@@ -164,7 +166,8 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
         });
 
     }
-    // Start service to play music and queue all following tracks
+
+    // Start service to play music and queue all tracks in playlist
     private void playPlaylist(final int position) {
         // Add every song in the playlist
         Intent intent = new Intent(context, MusicService.class);
@@ -204,7 +207,6 @@ public class PlaylistAdapter extends RecyclerView.Adapter<sg.edu.tp.seanwong.mus
                 String charString = charSequence.toString();
                 search = charString;
                 filteredPlaylists.clear();
-                Log.d("msongs on query", mPlaylists.toString());
                 ArrayList<Playlist> searchResults;
                 if (charString.isEmpty()) {
                     searchResults = new ArrayList<>(mPlaylists);

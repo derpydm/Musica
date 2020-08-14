@@ -13,7 +13,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="64dp"
         android:layout_marginEnd="16dp"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_album_24px"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,7 +22,7 @@
     <TextView
         android:id="@+id/now_playing_album"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
@@ -50,18 +50,18 @@
     <com.google.android.exoplayer2.ui.PlayerControlView
         android:id="@+id/now_playing_playerview"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
+        android:layout_height="0dp"
+        app:controller_layout_id="@layout/now_playing_controls"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:controller_layout_id="@layout/now_playing_controls">
+        app:layout_constraintStart_toStartOf="parent">
 
     </com.google.android.exoplayer2.ui.PlayerControlView>
 
     <TextView
         android:id="@+id/now_playing_artist"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"

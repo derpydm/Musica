@@ -3,11 +3,8 @@ import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
-
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -31,6 +28,9 @@ public class Playlist implements Serializable, Parcelable {
         return songs;
     }
 
+    public void setSongs(ArrayList<Song> songs) {
+        this.songs = songs;
+    }
 
     // Serializes an object and saves it to a file
     public void saveToFile(Context context) {
@@ -39,6 +39,7 @@ public class Playlist implements Serializable, Parcelable {
             if (!context.getExternalFilesDir(null).exists()) {
                 context.getExternalFilesDir(null).mkdir();
             }
+
             // Write playlist object to a file
             File outputFile = new File(context.getExternalFilesDir(null), this.name + ".playlist");
             if (!outputFile.exists()) {
@@ -99,6 +100,7 @@ public class Playlist implements Serializable, Parcelable {
         }
         return playlist;
     }
+
 
     public static void deletePlaylistFile(Context context, String playlistName) {
         // Delete the playlist if it exists
