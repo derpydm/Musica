@@ -184,10 +184,10 @@ public class PlaylistFragment extends Fragment implements PlaylistAdapter.OnUpda
             if (playlist != null) {
                 // Iterate through all songs, if a song is not present on filesystem we will remove it from the playlist
                 ArrayList<Song> songs = playlist.getSongs();
-                for (Song song: songs) {
-                    File songFile = new File(song.getPath());
+                for (int i = 0; i < songs.size(); i++) {
+                    File songFile = new File(songs.get(i).getPath());
                     if (!songFile.exists()) {
-                        songs.remove(song);
+                        songs.remove(songs.get(i));
                         playlist.setSongs(songs);
                         // Save playlist
                         playlist.saveToFile(getContext());
